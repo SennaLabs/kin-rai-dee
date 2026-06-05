@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { FoodPhoto } from "@/components/ui/food-photo";
@@ -196,7 +197,11 @@ export function NoMatchScreen({
           gap: 10,
         }}
       >
-        <PrimaryButton onClick={onExpand}>ขยายรัศมี · โหลดร้านเพิ่ม 🔄</PrimaryButton>
+        <PrimaryButton onClick={onExpand}>
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            ขยายรัศมี · โหลดร้านเพิ่ม <ArrowsClockwiseIcon size={18} weight="bold" />
+          </span>
+        </PrimaryButton>
         <button
           className="rm-tap font-display"
           onClick={onRestart}

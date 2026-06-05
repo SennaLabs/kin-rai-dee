@@ -1,6 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
+import {
+  ArrowLeftIcon,
+  ArrowsClockwiseIcon,
+  ClockIcon,
+  MapPinIcon,
+  NavigationArrowIcon,
+} from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { FoodPhoto } from "@/components/ui/food-photo";
@@ -176,7 +183,7 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
           }}
         >
           <InfoRow
-            icon="🕒"
+            icon={<ClockIcon size={20} weight="bold" color="var(--cta)" />}
             main={
               <span
                 style={{
@@ -190,7 +197,7 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
             sub={`เวลาทำการ ${r.hours}`}
           />
           <InfoRow
-            icon="📍"
+            icon={<MapPinIcon size={20} weight="bold" color="var(--cta)" />}
             main={r.addr}
             sub={`ห่างจากคุณ ${r.dist} กม.`}
             last
@@ -278,7 +285,9 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
             padding: 8,
           }}
         >
-          ↺ หาร้านอื่นต่อ / เริ่มรอบใหม่
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <ArrowsClockwiseIcon size={16} weight="bold" /> หาร้านอื่นต่อ / เริ่มรอบใหม่
+          </span>
         </button>
         <button
           className="rm-tap font-display"
@@ -295,7 +304,9 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
             padding: "4px 8px",
           }}
         >
-          ← กลับหน้าหลัก
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <ArrowLeftIcon size={16} weight="bold" /> กลับหน้าหลัก
+          </span>
         </button>
       </div>
 
@@ -310,7 +321,9 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
           color="linear-gradient(180deg,#FF6B4A,#E63946)"
           onClick={() => alert("เปิด Google Maps นำทางไป " + r.name)}
         >
-          ไปกันเลย · นำทาง 🧭
+          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            ไปกันเลย · นำทาง <NavigationArrowIcon size={20} weight="bold" />
+          </span>
         </PrimaryButton>
       </div>
     </Screen>
