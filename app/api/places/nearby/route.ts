@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { FOOD_PLACE_TYPES, isFoodPlaceType } from "@/lib/data";
 
 // Server-side proxy for **Nearby Search (New)** — Places API (New).
 //   POST https://places.googleapis.com/v1/places:searchNearby
@@ -33,6 +34,7 @@ const FIELD_MASK = [
   "places.userRatingCount",
   "places.priceLevel",
   "places.currentOpeningHours.openNow",
+  "places.primaryType",
   "places.types",
   "places.shortFormattedAddress",
   "places.photos.name",
@@ -42,6 +44,15 @@ const MAX_RESULTS = 20; // searchNearby (New) hard cap
 const MAX_RADIUS_M = 50_000; // searchNearby (New) hard cap
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 200;
+const DEFAULT_INCLUDED_TYPES = [
+  "restaurant",
+  "cafe",
+  "coffee_shop",
+  "bakery",
+  "dessert_shop",
+  "meal_takeaway",
+  "food_court",
+];
 
 type NearbyPlace = {
   id: string;
@@ -52,6 +63,7 @@ type NearbyPlace = {
   reviews?: number;
   price?: number; // 1–4
   open?: boolean;
+  primaryType?: string;
   types?: string[];
   addr?: string;
   photo?: string; // photo resource name: places/{id}/photos/{ref}
@@ -84,6 +96,7 @@ type RawPlace = {
   userRatingCount?: number;
   priceLevel?: string;
   currentOpeningHours?: { openNow?: boolean };
+  primaryType?: string;
   types?: string[];
   shortFormattedAddress?: string;
   photos?: { name?: string }[];
@@ -101,10 +114,23 @@ function project(places: RawPlace[]): NearbyPlace[] {
       reviews: p.userRatingCount,
       price: priceLevelToNumber(p.priceLevel),
       open: p.currentOpeningHours?.openNow,
+      primaryType: p.primaryType,
       types: p.types,
       addr: p.shortFormattedAddress,
       photo: p.photos?.[0]?.name,
     }));
+}
+
+function parseIncludedTypes(value: string | null): string[] {
+  if (!value) return [];
+  const unique = new Set<string>();
+  value
+    .split(",")
+    .map((type) => type.trim())
+    .filter((type) => type && isFoodPlaceType(type))
+    .slice(0, 50)
+    .forEach((type) => unique.add(type));
+  return [...unique];
 }
 
 export async function GET(request: NextRequest) {
@@ -129,9 +155,13 @@ export async function GET(request: NextRequest) {
     Math.max(Number(searchParams.get("radius")) || 2000, 1),
     MAX_RADIUS_M,
   );
+  const requestedTypes = parseIncludedTypes(searchParams.get("types"));
+  const includedTypes = requestedTypes.length
+    ? requestedTypes
+    : DEFAULT_INCLUDED_TYPES.filter((type) => FOOD_PLACE_TYPES.includes(type));
 
   // Round the centre to ~110 m so nearby rooms share a cache entry.
-  const key = `${lat.toFixed(3)},${lng.toFixed(3)}:${Math.round(radius)}`;
+  const key = `${lat.toFixed(3)},${lng.toFixed(3)}:${Math.round(radius)}:${includedTypes.join("|")}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
     return NextResponse.json({
@@ -148,7 +178,7 @@ export async function GET(request: NextRequest) {
       "X-Goog-FieldMask": FIELD_MASK,
     },
     body: JSON.stringify({
-      includedTypes: ["restaurant"],
+      includedTypes,
       maxResultCount: MAX_RESULTS,
       rankPreference: "POPULARITY",
       languageCode: "th",

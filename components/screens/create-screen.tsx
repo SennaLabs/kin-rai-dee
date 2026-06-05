@@ -6,12 +6,8 @@ import { MagnifyingGlassIcon, MapPinIcon } from "@phosphor-icons/react";
 import { BackHeader } from "@/components/ui/back-header";
 import { Chip, PrimaryButton } from "@/components/ui/buttons";
 import { Screen } from "@/components/ui/screen";
-import { CUISINES, priceStr } from "@/lib/data";
-import { mapsConfig } from "@/lib/config/maps";
+import { FOOD_PLACE_TYPE_OPTIONS, priceStr } from "@/lib/data";
 import type { RoomFilters } from "@/lib/types";
-
-// Bangkok city center — fallback when geolocation is unavailable
-const BANGKOK = { lat: mapsConfig.defaultCenter.lat, lng: mapsConfig.defaultCenter.lng };
 
 type CreateScreenProps = {
   onBack: () => void;
@@ -23,19 +19,21 @@ type CreateScreenProps = {
 export function CreateScreen({ onBack, onCreate, loading = false, error }: CreateScreenProps) {
   const [radius, setRadius] = useState(2);
   const [price, setPrice] = useState<number[]>([1, 2]);
-  const [cuisines, setCuisines] = useState<string[]>(["อีสาน", "ญี่ปุ่น"]);
+  const [cuisines, setCuisines] = useState<string[]>(["restaurant"]);
   const [openNow, setOpenNow] = useState(true);
-  const [loc, setLoc] = useState<"current" | "pin">("current");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geoLabel, setGeoLabel] = useState("กำลังหาตำแหน่ง…");
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoRequest, setGeoRequest] = useState(0);
 
-  // Request geolocation when "ใช้ตำแหน่งปัจจุบัน" is selected
+  // Creating a room is tied to the browser's current geolocation for now.
   useEffect(() => {
-    if (loc !== "current") return;
+    setCoords(null);
+    setGeoError(null);
+    setGeoLabel("กำลังหาตำแหน่ง…");
     if (!navigator.geolocation) {
-      setGeoLabel("ไม่รองรับ GPS · ใช้ตำแหน่งกรุงเทพฯ");
-      setCoords(BANGKOK);
+      setGeoLabel("เบราว์เซอร์ไม่รองรับตำแหน่ง");
+      setGeoError("ต้องใช้ตำแหน่งปัจจุบันก่อนสร้างห้อง");
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -45,13 +43,13 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
         setGeoError(null);
       },
       () => {
-        setGeoLabel("ใช้ตำแหน่งกรุงเทพฯ (GPS ล้มเหลว)");
-        setCoords(BANGKOK);
-        setGeoError("ไม่สามารถรับตำแหน่งได้");
+        setCoords(null);
+        setGeoLabel("เปิดสิทธิ์ตำแหน่งแล้วลองใหม่");
+        setGeoError("ต้องใช้ตำแหน่งปัจจุบันก่อนสร้างห้อง");
       },
       { timeout: 10_000, enableHighAccuracy: false },
     );
-  }, [loc]);
+  }, [geoRequest]);
 
   const togglePrice = (n: number) =>
     setPrice((p) => (p.includes(n) ? p.filter((x) => x !== n) : [...p, n]));
@@ -59,10 +57,10 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
     setCuisines((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
 
   function handleCreate() {
-    const location = coords ?? BANGKOK;
+    if (!coords) return;
     onCreate({
-      lat: location.lat,
-      lng: location.lng,
+      lat: coords.lat,
+      lng: coords.lng,
       radiusKm: radius,
       priceMin: price.length > 0 ? Math.min(...price) : 1,
       priceMax: price.length > 0 ? Math.max(...price) : 4,
@@ -88,7 +86,7 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
         <SettingCard title="ตำแหน่ง">
           <button
             className="rm-tap"
-            onClick={() => setLoc("current")}
+            onClick={() => setGeoRequest((n) => n + 1)}
             style={{
               width: "100%",
               display: "flex",
@@ -96,11 +94,8 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
               gap: 12,
               padding: 12,
               borderRadius: 16,
-              border:
-                loc === "current"
-                  ? "2px solid var(--coral)"
-                  : "2px solid var(--line)",
-              background: loc === "current" ? "rgba(255,90,60,0.06)" : "#fff",
+              border: "2px solid var(--coral)",
+              background: "rgba(255,90,60,0.06)",
               cursor: "pointer",
               textAlign: "left",
             }}
@@ -128,14 +123,15 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
                 ใช้ตำแหน่งปัจจุบัน
               </div>
               <div style={{ fontSize: 12.5, color: geoError ? "var(--cta)" : "var(--ink-3)" }}>
-                {loc === "current" ? geoLabel : "GPS · ตำแหน่งอัตโนมัติ"}
+                {geoLabel}
               </div>
             </div>
-            {loc === "current" && <Check />}
+            {coords && <Check />}
           </button>
           <button
             className="rm-tap"
-            onClick={() => setLoc("pin")}
+            disabled
+            aria-disabled="true"
             style={{
               width: "100%",
               marginTop: 8,
@@ -144,11 +140,11 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
               gap: 12,
               padding: 12,
               borderRadius: 16,
-              border:
-                loc === "pin" ? "2px solid var(--coral)" : "2px solid var(--line)",
-              background: loc === "pin" ? "rgba(255,90,60,0.06)" : "#fff",
-              cursor: "pointer",
+              border: "2px dashed var(--line-strong)",
+              background: "rgba(255,255,255,0.58)",
+              cursor: "not-allowed",
               textAlign: "left",
+              opacity: 0.58,
             }}
           >
             <div
@@ -174,10 +170,9 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
                 พิมพ์ค้นหา / ปักหมุด
               </div>
               <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
-                เลือกย่านที่อยากกิน
+                ฟีเจอร์ในอนาคต
               </div>
             </div>
-            {loc === "pin" && <Check />}
           </button>
         </SettingCard>
 
@@ -224,15 +219,18 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
         </SettingCard>
 
         {/* cuisines */}
-        <SettingCard title="ประเภทอาหาร" hint={`${cuisines.length} อย่าง`}>
+        <SettingCard
+          title="ประเภทอาหาร"
+          hint={cuisines.length ? `${cuisines.length} type` : "ทุกประเภทอาหาร"}
+        >
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {CUISINES.map((c) => (
+            {FOOD_PLACE_TYPE_OPTIONS.map((option) => (
               <Chip
-                key={c}
-                active={cuisines.includes(c)}
-                onClick={() => toggleCuisine(c)}
+                key={option.type}
+                active={cuisines.includes(option.type)}
+                onClick={() => toggleCuisine(option.type)}
               >
-                {c}
+                {option.emoji} {option.label}
               </Chip>
             ))}
           </div>
@@ -271,7 +269,7 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
           padding: "12px 24px max(20px, env(safe-area-inset-bottom))",
         }}
       >
-        {error && (
+        {(error || geoError) && (
           <p
             style={{
               margin: "0 0 10px",
@@ -281,11 +279,17 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
               fontWeight: 600,
             }}
           >
-            {error}
+            {error ?? geoError}
           </p>
         )}
-        <PrimaryButton onClick={handleCreate} disabled={loading}>
-          {loading ? "กำลังสร้างห้อง…" : "สร้างห้อง 🎉"}
+        <PrimaryButton onClick={handleCreate} disabled={loading || !coords}>
+          {loading
+            ? "กำลังสร้างห้อง…"
+            : coords
+              ? "สร้างห้อง 🎉"
+              : geoError
+                ? "เปิดสิทธิ์ตำแหน่งก่อน"
+                : "กำลังหาตำแหน่ง…"}
         </PrimaryButton>
       </div>
     </Screen>

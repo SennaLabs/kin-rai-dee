@@ -13,8 +13,8 @@
 
           "status": {
             ".read": "auth != null",
-            ".write": "auth != null && (root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid || (newData.val() === 'matched' && root.child('rooms').child($code).child('match').exists() && root.child('rooms').child($code).child('participants').child(auth.uid).exists()))",
-            ".validate": "newData.isString() && (newData.val() === 'lobby' || newData.val() === 'active' || newData.val() === 'matched' || newData.val() === 'ended')"
+            ".write": "auth != null && (root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid || ((newData.val() === 'matched' || newData.val() === 'final_vote' || newData.val() === 'no_match') && root.child('rooms').child($code).child('participants').child(auth.uid).exists()))",
+            ".validate": "newData.isString() && (newData.val() === 'lobby' || newData.val() === 'active' || newData.val() === 'final_vote' || newData.val() === 'no_match' || newData.val() === 'matched' || newData.val() === 'ended')"
           },
 
           "hostId": {
@@ -82,21 +82,71 @@
           }
         },
 
+        "dislikes": {
+          ".write": "auth != null && !newData.exists() && root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid",
+          "$restaurantId": {
+            "$uid": {
+              ".write": "auth != null && $uid === auth.uid && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && root.child('rooms').child($code).child('meta').child('status').val() === 'active'",
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            }
+          }
+        },
+
         "progress": {
           ".write": "auth != null && !newData.exists() && root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid",
           "$uid": {
-            ".write": "auth != null && $uid === auth.uid && root.child('rooms').child($code).child('participants').child(auth.uid).exists()",
+            ".write": "auth != null && $uid === auth.uid && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && root.child('rooms').child($code).child('meta').child('status').val() === 'active'",
             ".validate": "newData.isNumber() && newData.val() >= 0"
           }
         },
 
+        "results": {
+          ".write": "auth != null && ((root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid && !newData.exists()) || (!data.exists() && newData.exists() && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && root.child('rooms').child($code).child('meta').child('status').val() === 'active'))",
+          "computedAt": { ".validate": "newData.isNumber()" },
+          "noMatch": { ".validate": "newData.isBoolean()" },
+          "ranking": {
+            "$index": {
+              ".validate": "newData.hasChildren(['restaurantId', 'rank', 'deckIndex', 'likes', 'voterCount', 'likePct'])",
+              "restaurantId": { ".validate": "newData.isString()" },
+              "rank": { ".validate": "newData.isNumber() && newData.val() >= 1" },
+              "deckIndex": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+              "likes": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+              "voterCount": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+              "likePct": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" },
+              "$other": { ".validate": false }
+            }
+          },
+          "$other": { ".validate": false }
+        },
+
+        "finalVote": {
+          ".write": "auth != null && ((root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid && !newData.exists()) || (newData.exists() && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && (root.child('rooms').child($code).child('meta').child('status').val() === 'active' || root.child('rooms').child($code).child('meta').child('status').val() === 'final_vote')))",
+          "round": { ".validate": "newData.isNumber() && newData.val() >= 1" },
+          "createdAt": { ".validate": "newData.isNumber()" },
+          "options": {
+            "$restaurantId": { ".validate": "newData.isBoolean() && newData.val() === true" }
+          },
+          "votes": {
+            "$uid": {
+              ".write": "auth != null && $uid === auth.uid && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && root.child('rooms').child($code).child('meta').child('status').val() === 'final_vote'",
+              ".validate": "newData.isString() && root.child('rooms').child($code).child('finalVote').child('options').child(newData.val()).exists()"
+            }
+          },
+          "resolved": {
+            "winnerId": { ".validate": "newData.isString()" },
+            "at": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          },
+          "$other": { ".validate": false }
+        },
+
         "match": {
-          ".write": "auth != null && ((!newData.exists() && root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid) || (!data.exists() && newData.exists() && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && root.child('rooms').child($code).child('meta').child('status').val() === 'active'))",
+          ".write": "auth != null && ((!newData.exists() && root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid) || (!data.exists() && newData.exists() && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && (root.child('rooms').child($code).child('meta').child('status').val() === 'active' || root.child('rooms').child($code).child('meta').child('status').val() === 'final_vote')))",
 
           "restaurantId": {
             ".validate": "newData.isString() && root.child('rooms').child($code).child('likes').child(newData.val()).exists()"
           },
-          "at": { ".validate": "newData.isNumber() && newData.val() <= now" },
+          "at": { ".validate": "newData.isNumber()" },
           "likers": {
             "$uid": {
               ".validate": "newData.val() === true && root.child('rooms').child($code).child('likes').child(newData.parent().parent().child('restaurantId').val()).child($uid).exists()"

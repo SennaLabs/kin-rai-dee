@@ -2,8 +2,9 @@
 //
 // The whole room tree lives under rooms/{code}. Reads happen through a single
 // onValue subscription that assembles a GameState; writes are small, targeted,
-// and idempotent. Match declaration goes through an RTDB transaction so only one
-// client can ever win the round (first-writer-wins, wiki §2.7 #12 / §3.4).
+// and idempotent. Results are calculated after every locked-in voter reaches
+// the end of the shared deck, with transactions guarding result/final-winner
+// persistence so multiple clients can safely observe the same completion.
 
 import {
   get,
@@ -19,7 +20,9 @@ import { firebaseRtdb } from "@/lib/firebase";
 import { restaurantService } from "@/lib/services/restaurant.service";
 import type {
   GameState,
+  FinalVoteRound,
   Player,
+  RankedResult,
   Restaurant,
   Room,
   RoomFilters,
@@ -61,8 +64,32 @@ type RawRoom = {
   participants?: Record<string, RawParticipant>;
   deck?: Restaurant[];
   likes?: Record<string, Record<string, number>>;
+  dislikes?: Record<string, Record<string, number>>;
   progress?: Record<string, number>;
+  results?: {
+    computedAt?: number;
+    noMatch?: boolean;
+    ranking?: RawRankedResult[];
+  } | null;
+  finalVote?: RawFinalVote | null;
   match?: { restaurantId: string; at?: number; likers?: Record<string, boolean> } | null;
+};
+
+type RawRankedResult = {
+  restaurantId: string;
+  rank: number;
+  deckIndex: number;
+  likes: number;
+  voterCount: number;
+  likePct: number;
+};
+
+type RawFinalVote = {
+  round?: number;
+  options?: Record<string, boolean>;
+  votes?: Record<string, string>;
+  createdAt?: number;
+  resolved?: { winnerId?: string; at?: number };
 };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -91,6 +118,91 @@ function boolMap(uids: string[]): Record<string, boolean> {
   }, {});
 }
 
+function votersFromState(state: GameState): string[] {
+  return state.roster.length ? state.roster : state.room.players.map((p) => p.id);
+}
+
+function voteRecordToArrays(
+  votes: Record<string, Record<string, number>> | undefined,
+): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [restaurantId, voters] of Object.entries(votes ?? {})) {
+    out[restaurantId] = Object.keys(voters ?? {});
+  }
+  return out;
+}
+
+function rankDeck(
+  deck: Restaurant[],
+  likes: Record<string, string[]>,
+  voters: string[],
+): RankedResult[] {
+  const voterCount = voters.length;
+  return deck
+    .map<RankedResult>((r, deckIndex) => {
+      const likedBy = likes[r.id]?.filter((uid) => voters.includes(uid)) ?? [];
+      const likePct = voterCount ? Math.round((likedBy.length / voterCount) * 100) : 0;
+      return {
+        restaurantId: r.id,
+        rank: deckIndex + 1,
+        deckIndex,
+        likes: likedBy.length,
+        voterCount,
+        likePct,
+      };
+    })
+    .sort((a, b) => {
+      if (b.likes !== a.likes) return b.likes - a.likes;
+      if (b.likePct !== a.likePct) return b.likePct - a.likePct;
+      return a.deckIndex - b.deckIndex;
+    })
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+function topTieIds(ranking: RankedResult[]): string[] {
+  const top = ranking[0];
+  if (!top || top.likes === 0) return [];
+  return ranking
+    .filter((row) => row.likes === top.likes && row.likePct === top.likePct)
+    .map((row) => row.restaurantId);
+}
+
+function allVotersFinished(state: GameState): boolean {
+  const voters = votersFromState(state);
+  return (
+    state.room.deckSize > 0 &&
+    voters.length > 0 &&
+    voters.every((uid) => (state.progress[uid] ?? 0) >= state.room.deckSize)
+  );
+}
+
+function allFinalVotesIn(state: GameState): boolean {
+  if (!state.finalVote) return false;
+  const options = new Set(state.finalVote.options);
+  const voters = votersFromState(state);
+  return (
+    voters.length > 0 &&
+    voters.every((uid) => {
+      const vote = state.finalVote?.votes[uid];
+      return typeof vote === "string" && options.has(vote);
+    })
+  );
+}
+
+function finalVoteWinners(
+  finalVote: FinalVoteRound,
+  voters: string[],
+): string[] {
+  const optionSet = new Set(finalVote.options);
+  const counts = new Map(finalVote.options.map((id) => [id, 0]));
+  for (const uid of voters) {
+    const vote = finalVote.votes[uid];
+    if (optionSet.has(vote)) counts.set(vote, (counts.get(vote) ?? 0) + 1);
+  }
+  const max = Math.max(...counts.values());
+  return finalVote.options.filter((id) => (counts.get(id) ?? 0) === max);
+}
+
 function db() {
   return firebaseRtdb();
 }
@@ -117,10 +229,8 @@ function toGameState(code: string, raw: RawRoom, myUid: string): GameState {
       return ja - jb;
     });
 
-  const likes: Record<string, string[]> = {};
-  for (const [restaurantId, voters] of Object.entries(raw.likes ?? {})) {
-    likes[restaurantId] = Object.keys(voters ?? {});
-  }
+  const likes = voteRecordToArrays(raw.likes);
+  const dislikes = voteRecordToArrays(raw.dislikes);
 
   const room: Room = {
     id: code,
@@ -139,7 +249,17 @@ function toGameState(code: string, raw: RawRoom, myUid: string): GameState {
     room,
     deck: raw.deck ?? [],
     likes,
+    dislikes,
     progress: raw.progress ?? {},
+    results: raw.results?.ranking ?? [],
+    finalVote: raw.finalVote
+      ? {
+          round: asNumber(raw.finalVote.round, 1),
+          options: Object.keys(raw.finalVote.options ?? {}),
+          votes: raw.finalVote.votes ?? {},
+          createdAt: asNumber(raw.finalVote.createdAt, Date.now()),
+        }
+      : null,
     match: raw.match
       ? {
           restaurantId: raw.match.restaurantId,
@@ -149,30 +269,6 @@ function toGameState(code: string, raw: RawRoom, myUid: string): GameState {
       : null,
     roster: Object.keys(meta.roster ?? {}),
   };
-}
-
-/**
- * The unanimous-match test (wiki §2.5): a restaurant matches when every voter
- * who is still *connected* has liked it. Threshold = connected voters, so a
- * drop-out lowers the bar and the remaining likes can complete instantly.
- * Returns the first matching restaurant id in deck order, or null.
- */
-function findUnanimous(state: GameState): string | null {
-  const connectedVoters = state.roster.filter(
-    (uid) => state.room.players.find((p) => p.id === uid)?.connected,
-  );
-  if (connectedVoters.length === 0) return null;
-
-  const order = state.deck.length
-    ? state.deck.map((r) => r.id)
-    : Object.keys(state.likes);
-
-  for (const restaurantId of order) {
-    const likers = state.likes[restaurantId];
-    if (!likers || likers.length < connectedVoters.length) continue;
-    if (connectedVoters.every((uid) => likers.includes(uid))) return restaurantId;
-  }
-  return null;
 }
 
 // ── service ─────────────────────────────────────────────────────────────────
@@ -289,35 +385,38 @@ export const roomService = {
       "meta/deckSize": deck.length,
       deck: clean(deck),
       likes: null,
+      dislikes: null,
       progress: null,
+      results: null,
+      finalVote: null,
       match: null,
     });
   },
 
-  /** Record a like (idempotent, wiki §2.7 #11). Pass is not stored. */
-  async submitLike(code: string, uid: string, restaurantId: string): Promise<void> {
-    await update(ref(db(), `rooms/${code}/likes/${restaurantId}`), {
-      [uid]: serverTimestamp(),
+  /** Record one swipe decision and cursor atomically, so final ranking never races. */
+  async submitDecision(
+    code: string,
+    uid: string,
+    restaurantId: string,
+    liked: boolean,
+    cursor: number,
+  ): Promise<void> {
+    const decisionPath = liked ? "likes" : "dislikes";
+    await update(ref(db(), `rooms/${code}`), {
+      [`${decisionPath}/${restaurantId}/${uid}`]: serverTimestamp(),
+      [`progress/${uid}`]: cursor,
     });
   },
 
-  /** Persist how far this player has swiped, for resume (wiki §2.7 #2). */
-  async setProgress(code: string, uid: string, cursor: number): Promise<void> {
-    await update(ref(db(), `rooms/${code}/progress`), { [uid]: cursor });
-  },
-
-  /**
-   * Declare a match through a transaction so exactly one client wins
-   * (wiki §3.4). On winning, flip status → matched.
-   */
-  async declareMatch(
+  /** Persist the single final winner. Safe for many clients to attempt. */
+  async declareWinner(
     code: string,
     restaurantId: string,
     likers: string[],
   ): Promise<boolean> {
     const matchRef = ref(db(), `rooms/${code}/match`);
     const result = await runTransaction(matchRef, (current) => {
-      if (current) return; // already declared — abort
+      if (current) return; // already declared
       return { restaurantId, at: serverTimestamp(), likers: boolMap(likers) };
     });
 
@@ -326,6 +425,98 @@ export const roomService = {
       return true;
     }
     return false;
+  },
+
+  /**
+   * Compute collect-all ranking after every voter finishes the deck. A
+   * transaction on `results` makes the calculation first-writer-wins without
+   * ending the round before completion.
+   */
+  async completeDeckResults(code: string, state: GameState): Promise<void> {
+    if (!allVotersFinished(state) || state.results.length > 0 || state.match) return;
+
+    const voters = votersFromState(state);
+    const ranking = rankDeck(state.deck, state.likes, voters);
+    const noMatch = ranking.every((row) => row.likes === 0);
+
+    const result = await runTransaction(ref(db(), `rooms/${code}/results`), (current) => {
+      if (current) return;
+      return clean({
+        computedAt: Date.now(),
+        noMatch,
+        ranking,
+      });
+    });
+
+    if (!result.committed) return;
+
+    if (noMatch) {
+      await update(ref(db(), `rooms/${code}/meta`), {
+        status: "no_match" as RoomStatus,
+      });
+      return;
+    }
+
+    const topIds = topTieIds(ranking);
+    if (topIds.length === 1) {
+      await this.declareWinner(code, topIds[0], state.likes[topIds[0]] ?? []);
+      return;
+    }
+
+    await update(ref(db(), `rooms/${code}`), {
+      "meta/status": "final_vote" as RoomStatus,
+      finalVote: clean({
+        round: 1,
+        options: boolMap(topIds),
+        votes: null,
+        createdAt: Date.now(),
+      }),
+    });
+  },
+
+  /** One vote per player per tie-break round. The latest selection replaces theirs. */
+  async submitFinalVote(code: string, uid: string, restaurantId: string): Promise<void> {
+    await update(ref(db(), `rooms/${code}/finalVote/votes`), {
+      [uid]: restaurantId,
+    });
+  },
+
+  /** Resolve a complete final-vote round, repeating with tied options if needed. */
+  async resolveFinalVote(code: string, state: GameState): Promise<void> {
+    if (!state.finalVote || !allFinalVotesIn(state) || state.match) return;
+
+    const voters = votersFromState(state);
+    const winners = finalVoteWinners(state.finalVote, voters);
+
+    const result = await runTransaction(ref(db(), `rooms/${code}/finalVote`), (current) => {
+      if (!current || current.round !== state.finalVote?.round) return;
+      const votes = (current.votes ?? {}) as Record<string, string>;
+      const currentRound: FinalVoteRound = {
+        round: asNumber(current.round, 1),
+        options: Object.keys(current.options ?? {}),
+        votes,
+        createdAt: asNumber(current.createdAt, Date.now()),
+      };
+      if (!voters.every((uid) => currentRound.options.includes(votes[uid]))) return;
+
+      const roundWinners = finalVoteWinners(currentRound, voters);
+      if (roundWinners.length === 1) {
+        return {
+          ...current,
+          resolved: { winnerId: roundWinners[0], at: Date.now() },
+        };
+      }
+
+      return {
+        round: currentRound.round + 1,
+        options: boolMap(roundWinners),
+        votes: null,
+        createdAt: Date.now(),
+      };
+    });
+
+    if (!result.committed || winners.length !== 1) return;
+    await this.declareWinner(code, winners[0], state.likes[winners[0]] ?? []);
   },
 
   /**
@@ -340,7 +531,10 @@ export const roomService = {
       "meta/deckSize": deck.length,
       deck: clean(deck),
       likes: null,
+      dislikes: null,
       progress: null,
+      results: null,
+      finalVote: null,
       match: null,
     });
   },
@@ -379,17 +573,16 @@ export const roomService = {
   },
 
   /**
-   * Subscribe to the full live room. Assembles a GameState on every change and,
-   * while active, runs client-side match detection: any client that sees a
-   * unanimous like attempts to declare the match (so a crashed last-swiper can't
-   * stall the round, wiki §3.4). Passes null if the room disappears.
+   * Subscribe to the full live room. Any client that observes a completed deck
+   * or tie-break round may attempt the next state transition; RTDB transactions
+   * keep those transitions single-writer. Passes null if the room disappears.
    */
   subscribeToRoom(
     code: string,
     myUid: string,
     callback: (state: GameState | null) => void,
   ): () => void {
-    let declaring = false;
+    let advancing = false;
 
     return onValue(ref(db(), `rooms/${code}`), (snap) => {
       if (!snap.exists()) {
@@ -400,17 +593,24 @@ export const roomService = {
       const state = toGameState(code, snap.val() as RawRoom, myUid);
       callback(state);
 
-      if (state.room.status === "active" && !state.match && !declaring) {
-        const restaurantId = findUnanimous(state);
-        if (restaurantId) {
-          declaring = true;
-          roomService
-            .declareMatch(code, restaurantId, state.likes[restaurantId] ?? [])
-            .catch((err) => console.error("[roomService] declareMatch failed", err))
-            .finally(() => {
-              declaring = false;
-            });
-        }
+      if (advancing) return;
+
+      if (state.room.status === "active" && allVotersFinished(state)) {
+        advancing = true;
+        roomService
+          .completeDeckResults(code, state)
+          .catch((err) => console.error("[roomService] completeDeckResults failed", err))
+          .finally(() => {
+            advancing = false;
+          });
+      } else if (state.room.status === "final_vote" && allFinalVotesIn(state)) {
+        advancing = true;
+        roomService
+          .resolveFinalVote(code, state)
+          .catch((err) => console.error("[roomService] resolveFinalVote failed", err))
+          .finally(() => {
+            advancing = false;
+          });
       }
     });
   },

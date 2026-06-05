@@ -111,7 +111,7 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
             borderRadius: 999,
           }}
         >
-          🏆 ร้านที่แมตช์
+          รายละเอียดร้าน
         </div>
       </div>
 
@@ -174,7 +174,7 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
           </span>
         </div>
 
-        {/* everyone matched */}
+        {/* group context */}
         <div
           style={{
             marginTop: 14,
@@ -194,7 +194,7 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
             ))}
           </div>
           <span style={{ fontWeight: 600, fontSize: 13.5, color: "var(--good)" }}>
-            ทั้ง {players.length} คนชอบร้านนี้ ❤️
+            เลือกจากผลโหวตของผู้เล่น {players.length} คน
           </span>
         </div>
 
