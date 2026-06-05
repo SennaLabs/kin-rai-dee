@@ -205,21 +205,56 @@ export const PLAYERS: Player[] = [
   { id: "p4", name: "มิ้น", emoji: "🐱", host: false, me: false, ready: false, connected: true },
 ];
 
-// Cuisine chips used in Create Room.
-export const CUISINES = [
-  "อีสาน",
-  "ตามสั่ง",
-  "ญี่ปุ่น",
-  "ก๋วยเตี๋ยว",
-  "ปิ้งย่าง",
-  "ชาบู",
-  "อิตาเลียน",
-  "คาเฟ่",
-  "อาหารเหนือ",
-  "อาหารใต้",
-  "จีน",
-  "ของหวาน",
+// Google Places API (New) Table A Food and Drink types used in Create Room.
+// Keep the value as Google's place type id so it can be sent to includedTypes.
+export type FoodPlaceTypeOption = {
+  type: string;
+  label: string;
+  emoji: string;
+};
+
+export const FOOD_PLACE_TYPE_OPTIONS: FoodPlaceTypeOption[] = [
+  { type: "restaurant", label: "ร้านอาหาร", emoji: "🍽️" },
+  { type: "thai_restaurant", label: "อาหารไทย", emoji: "🍛" },
+  { type: "japanese_restaurant", label: "ญี่ปุ่น", emoji: "🍣" },
+  { type: "chinese_restaurant", label: "จีน", emoji: "🥟" },
+  { type: "korean_restaurant", label: "เกาหลี", emoji: "🥩" },
+  { type: "barbecue_restaurant", label: "ปิ้งย่าง", emoji: "🍖" },
+  { type: "hot_pot_restaurant", label: "หม้อไฟ", emoji: "🍲" },
+  { type: "seafood_restaurant", label: "อาหารทะเล", emoji: "🦐" },
+  { type: "noodle_shop", label: "ร้านเส้น", emoji: "🍜" },
+  { type: "ramen_restaurant", label: "ราเมง", emoji: "🍥" },
+  { type: "sushi_restaurant", label: "ซูชิ", emoji: "🍱" },
+  { type: "cafe", label: "คาเฟ่", emoji: "☕" },
+  { type: "coffee_shop", label: "กาแฟ", emoji: "☕" },
+  { type: "bakery", label: "เบเกอรี่", emoji: "🥐" },
+  { type: "dessert_shop", label: "ของหวาน", emoji: "🍧" },
+  { type: "fast_food_restaurant", label: "ฟาสต์ฟู้ด", emoji: "🍔" },
+  { type: "pizza_restaurant", label: "พิซซ่า", emoji: "🍕" },
+  { type: "vegetarian_restaurant", label: "มังสวิรัติ", emoji: "🥗" },
+  { type: "vegan_restaurant", label: "วีแกน", emoji: "🥬" },
+  { type: "meal_takeaway", label: "ซื้อกลับบ้าน", emoji: "🥡" },
+  { type: "food_court", label: "ฟู้ดคอร์ท", emoji: "🍱" },
 ];
+
+export const FOOD_PLACE_TYPES = FOOD_PLACE_TYPE_OPTIONS.map((option) => option.type);
+
+const FOOD_PLACE_TYPE_SET = new Set(FOOD_PLACE_TYPES);
+
+export function isFoodPlaceType(type: string): boolean {
+  return FOOD_PLACE_TYPE_SET.has(type);
+}
+
+export function foodTypeLabel(type: string): string {
+  return FOOD_PLACE_TYPE_OPTIONS.find((option) => option.type === type)?.label ?? type;
+}
+
+export function foodTypeEmoji(type: string): string {
+  return FOOD_PLACE_TYPE_OPTIONS.find((option) => option.type === type)?.emoji ?? "🍽️";
+}
+
+// Legacy alias for old call sites. Values are Google place type ids, not mock labels.
+export const CUISINES = FOOD_PLACE_TYPES;
 
 export const AVATAR_CHOICES = [
   "🦊",

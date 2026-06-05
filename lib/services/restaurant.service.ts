@@ -1,4 +1,10 @@
-import { RESTAURANTS } from "@/lib/data";
+import {
+  FOOD_PLACE_TYPE_OPTIONS,
+  foodTypeEmoji,
+  foodTypeLabel,
+  isFoodPlaceType,
+  RESTAURANTS,
+} from "@/lib/data";
 import type { Restaurant, RoomFilters } from "@/lib/types";
 
 // ── Compact shapes returned by our Places API (New) proxy routes ─────────────
@@ -15,6 +21,7 @@ type NearbyPlace = {
   reviews?: number;
   price?: number; // 1–4
   open?: boolean;
+  primaryType?: string;
   types?: string[];
   addr?: string;
   photo?: string; // photo resource name: places/{id}/photos/{ref}
@@ -40,29 +47,67 @@ function haversineKm(
 }
 
 const PLACE_TYPE_TO_CUISINE: Record<string, string> = {
-  japanese_restaurant: "ญี่ปุ่น",
-  chinese_restaurant: "จีน",
-  thai_restaurant: "ไทย",
-  italian_restaurant: "อิตาเลียน",
-  korean_restaurant: "เกาหลี",
-  barbecue_restaurant: "ปิ้งย่าง",
-  seafood_restaurant: "อาหารทะเล",
+  ...Object.fromEntries(
+    FOOD_PLACE_TYPE_OPTIONS.map((option) => [option.type, option.label]),
+  ),
+  african_restaurant: "แอฟริกัน",
   american_restaurant: "อเมริกัน",
+  asian_restaurant: "เอเชีย",
+  asian_fusion_restaurant: "เอเชียนฟิวชัน",
+  breakfast_restaurant: "อาหารเช้า",
+  buffet_restaurant: "บุฟเฟต์",
+  chicken_restaurant: "ไก่",
+  dessert_restaurant: "ของหวาน",
+  dim_sum_restaurant: "ติ่มซำ",
+  french_restaurant: "ฝรั่งเศส",
+  hamburger_restaurant: "เบอร์เกอร์",
   indian_restaurant: "อินเดีย",
-  pizza_restaurant: "พิซซ่า",
-  ramen_restaurant: "ราเมง",
-  sushi_restaurant: "ซูชิ",
-  cafe: "คาเฟ่",
-  bakery: "เบเกอรี่",
-  fast_food_restaurant: "ฟาสต์ฟู้ด",
-  meal_takeaway: "ซื้อกลับบ้าน",
+  indonesian_restaurant: "อินโดนีเซีย",
+  italian_restaurant: "อิตาเลียน",
+  korean_barbecue_restaurant: "ปิ้งย่างเกาหลี",
+  mediterranean_restaurant: "เมดิเตอร์เรเนียน",
+  mexican_restaurant: "เม็กซิกัน",
+  middle_eastern_restaurant: "ตะวันออกกลาง",
+  sandwich_shop: "แซนด์วิช",
+  steak_house: "สเต๊ก",
+  tea_house: "ชา",
+  vietnamese_restaurant: "เวียดนาม",
+  food: "อาหาร",
 };
 
-function cuisineFromTypes(types: string[]): string {
-  for (const t of types) {
+function unique<T>(items: T[]): T[] {
+  return [...new Set(items)];
+}
+
+function cuisineFromTypes(primaryType: string | undefined, types: string[]): string {
+  const orderedTypes = primaryType ? [primaryType, ...types] : types;
+  for (const t of orderedTypes) {
     if (PLACE_TYPE_TO_CUISINE[t]) return PLACE_TYPE_TO_CUISINE[t];
   }
   return "ร้านอาหาร";
+}
+
+function foodLabelsFromTypes(primaryType: string | undefined, types: string[]): string[] {
+  const orderedTypes = primaryType ? [primaryType, ...types] : types;
+  return unique(
+    orderedTypes
+      .filter((type) => isFoodPlaceType(type) || type === "food")
+      .map((type) => (type === "food" ? "อาหาร" : foodTypeLabel(type))),
+  );
+}
+
+function selectedFoodTypes(filters: RoomFilters): string[] {
+  return unique(filters.cuisines.filter(isFoodPlaceType));
+}
+
+function placeMatchesFoodTypes(r: Restaurant, types: string[]): boolean {
+  if (types.length === 0) return true;
+  if (!r.placeId) return true;
+  const placeTypes = new Set([r.primaryType, ...(r.placeTypes ?? [])].filter(Boolean));
+  for (const t of types) {
+    if (placeTypes.has(t)) return true;
+  }
+  return false;
 }
 
 const CUISINE_EMOJIS: Record<string, string> = {
@@ -79,6 +124,11 @@ const CUISINE_EMOJIS: Record<string, string> = {
   "คาเฟ่": "☕",
   "เบเกอรี่": "🥐",
   "ฟาสต์ฟู้ด": "🍔",
+  "หม้อไฟ": "🍲",
+  "ร้านเส้น": "🍜",
+  "กาแฟ": "☕",
+  "วีแกน": "🥬",
+  "ฟู้ดคอร์ท": "🍱",
   "ราเมง": "🍥",
   "ซูชิ": "🍱",
   "พิซซ่า": "🍕",
@@ -104,7 +154,9 @@ function mapPlaceToRestaurant(
   userLng: number,
   index: number,
 ): Restaurant {
-  const cuisine = cuisineFromTypes(place.types ?? []);
+  const types = place.types ?? [];
+  const cuisine = cuisineFromTypes(place.primaryType, types);
+  const tags = foodLabelsFromTypes(place.primaryType, types);
   return {
     id: place.id,
     name: place.name,
@@ -117,10 +169,12 @@ function mapPlaceToRestaurant(
     hours: "ดูใน Google Maps",
     addr: place.addr ?? "",
     phone: "",
-    tags: [cuisine],
-    emoji: CUISINE_EMOJIS[cuisine] ?? "🍽️",
+    tags: tags.length ? tags.slice(0, 3) : [cuisine],
+    emoji: CUISINE_EMOJIS[cuisine] ?? foodTypeEmoji(place.primaryType ?? "") ?? "🍽️",
     g: GRADIENTS[index % GRADIENTS.length],
     placeId: place.id,
+    primaryType: place.primaryType,
+    placeTypes: types,
     lat: place.lat,
     lng: place.lng,
     photoName: place.photo,
@@ -132,6 +186,7 @@ function mapPlaceToRestaurant(
 export const restaurantService = {
   async getNearby(filters: RoomFilters): Promise<Restaurant[]> {
     const radiusMeters = Math.round(filters.radiusKm * 1000);
+    const types = selectedFoodTypes(filters);
 
     // Nearby Search (New) has no "open now" filter, so we don't pass one — the
     // openNow field comes back per-place and we filter on it client-side below.
@@ -140,6 +195,7 @@ export const restaurantService = {
       lng: String(filters.lng),
       radius: String(radiusMeters),
     });
+    if (types.length > 0) params.set("types", types.join(","));
 
     let results: Restaurant[] = [];
 
@@ -159,13 +215,15 @@ export const restaurantService = {
     } catch (err) {
       console.warn("[restaurantService] Places API failed, using mock data:", err);
       // Development fallback: filter mock RESTAURANTS by the supplied criteria
+      const selectedLabels = types.map(foodTypeLabel);
       results = RESTAURANTS.filter((r) => {
         if (filters.openNow && !r.open) return false;
         if (r.price < filters.priceMin || r.price > filters.priceMax) return false;
         if (
-          filters.cuisines.length > 0 &&
-          !filters.cuisines.includes(r.cuisine) &&
-          !r.tags.some((t) => filters.cuisines.includes(t))
+          types.length > 0 &&
+          !types.includes("restaurant") &&
+          !selectedLabels.includes(r.cuisine) &&
+          !r.tags.some((t) => selectedLabels.includes(t))
         )
           return false;
         return r.dist <= filters.radiusKm;
@@ -177,12 +235,7 @@ export const restaurantService = {
     return results.filter((r) => {
       if (filters.openNow && !r.open) return false;
       if (r.price < filters.priceMin || r.price > filters.priceMax) return false;
-      if (
-        filters.cuisines.length > 0 &&
-        !filters.cuisines.includes(r.cuisine) &&
-        !r.tags.some((t) => filters.cuisines.includes(t))
-      )
-        return false;
+      if (!placeMatchesFoodTypes(r, types)) return false;
       return true;
     });
   },
@@ -243,13 +296,9 @@ export const restaurantService = {
       results = await this.getNearby({ ...filters, radiusKm });
     }
 
-    // The Places "type" → Thai-cuisine mapping is lossy (e.g. "อีสาน" maps from
-    // no Places type at all, "ญี่ปุ่น" only from japanese_restaurant), so a
-    // cuisine selection can filter out nearly every real result and starve the
-    // deck. Rather than fall back to mock data, relax just the cuisine
-    // preference — keeping the user's radius / price / open-now — to recover the
-    // real restaurants. The radius re-query hits the proxy's cache, so this
-    // costs no extra Places billing.
+    // If the chosen Google place types are too narrow for this area, relax just
+    // the type preference — keeping radius / price / open-now — to recover real
+    // food places from the proxy's default Food and Drink search.
     if (results.length < minDeck && filters.cuisines.length > 0) {
       const relaxed = await this.getNearby({ ...filters, radiusKm, cuisines: [] });
       if (relaxed.length > results.length) results = relaxed;

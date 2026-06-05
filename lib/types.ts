@@ -8,7 +8,9 @@
 //   deck/{index}         immutable Restaurant snapshot, set once on start
 //   likes/{restaurantId}/{uid}   ts        (like only; pass is not stored)
 //   progress/{uid}       cursor index
-//   match/               restaurantId, at, likers/{uid}: true   (first-writer-wins)
+//   results/             computed ranking after every roster voter finishes
+//   finalVote/           tie-break options + one vote per voter per round
+//   match/               final winner, set once after ranking/tie-breaks
 //
 // The types below are the *domain* shapes the UI consumes; room.service maps
 // the raw RTDB tree to/from them.
@@ -40,12 +42,19 @@ export type RoomFilters = {
   radiusKm: number;
   priceMin: number;
   priceMax: number;
+  /** Google Places Food and Drink place type ids used with includedTypes */
   cuisines: string[];
   openNow: boolean;
 };
 
-/** Room lifecycle — lobby → active → matched → ended (wiki §3.3). */
-export type RoomStatus = "lobby" | "active" | "matched" | "ended";
+/** Room lifecycle — lobby → active → final_vote/no_match/matched → ended. */
+export type RoomStatus =
+  | "lobby"
+  | "active"
+  | "final_vote"
+  | "no_match"
+  | "matched"
+  | "ended";
 
 export type Room = {
   /** RTDB key — identical to `code`. */
@@ -78,10 +87,27 @@ export type Player = {
 
 /** A declared match — set once, first-writer-wins via transaction (wiki §3.4). */
 export type MatchResult = {
-  /** the matched Restaurant's id (== Google place_id when from Places API) */
+  /** the winning Restaurant's id (== Google place_id when from Places API) */
   restaurantId: string;
+  /** users who liked the winner during the deck round */
   likers: string[];
   at: number;
+};
+
+export type RankedResult = {
+  restaurantId: string;
+  rank: number;
+  deckIndex: number;
+  likes: number;
+  voterCount: number;
+  likePct: number;
+};
+
+export type FinalVoteRound = {
+  round: number;
+  options: string[];
+  votes: Record<string, string>;
+  createdAt: number;
 };
 
 /**
@@ -94,8 +120,14 @@ export type GameState = {
   deck: Restaurant[];
   /** restaurantId → uids that liked it (pass is not recorded) */
   likes: Record<string, string[]>;
+  /** restaurantId → uids that passed it */
+  dislikes: Record<string, string[]>;
   /** uid → how many cards that player has swiped (resume cursor) */
   progress: Record<string, number>;
+  /** ranked collect-all results after everyone finishes the deck */
+  results: RankedResult[];
+  /** active tie-break round, if the top result is tied */
+  finalVote: FinalVoteRound | null;
   /** the declared match, or null while still swiping */
   match: MatchResult | null;
   /** uids locked into the round at start (the voters) */
@@ -125,6 +157,10 @@ export type Restaurant = {
   g: [string, string];
   /** Google Places place_id — present when data comes from Places API */
   placeId?: string;
+  /** Google Places API (New) primary type, when returned. */
+  primaryType?: string;
+  /** Google Places API (New) type ids, when returned. */
+  placeTypes?: string[];
   /** Coordinates — present when data comes from Places API */
   lat?: number;
   lng?: number;

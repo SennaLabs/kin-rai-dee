@@ -6,16 +6,16 @@ import { DetailScreen } from "@/components/screens/detail-screen";
 import { HomeScreen } from "@/components/screens/home-screen";
 import { JoinScreen } from "@/components/screens/join-screen";
 import { LobbyScreen } from "@/components/screens/lobby-screen";
-import { MatchScreen } from "@/components/screens/match-screen";
 import { NoMatchScreen } from "@/components/screens/no-match-screen";
+import { FinalVoteScreen, ResultsScreen } from "@/components/screens/results-screen";
 import { SwipeScreen } from "@/components/screens/swipe-screen";
 import { Screen } from "@/components/ui/screen";
 import { useReducedMotion } from "@/components/ui/motion";
-import { priceStr } from "@/lib/data";
+import { foodTypeLabel, priceStr } from "@/lib/data";
 import { authService } from "@/lib/services/auth.service";
 import { restaurantService } from "@/lib/services/restaurant.service";
 import { roomService } from "@/lib/services/room.service";
-import type { GameState, Player, RankedLike, Restaurant, RoomFilters } from "@/lib/types";
+import type { GameState, Player, RankedResult, Restaurant, RoomFilters } from "@/lib/types";
 
 type PreScreen = "home" | "create" | "join";
 
@@ -27,22 +27,34 @@ function buildRoomSettings(filters: RoomFilters): string[] {
   const priceMin = priceStr(filters.priceMin);
   const priceMax = priceStr(filters.priceMax);
   tags.push(priceMin === priceMax ? priceMin : `${priceMin}–${priceMax}`);
-  filters.cuisines.slice(0, 3).forEach((c) => tags.push(c));
+  filters.cuisines.slice(0, 3).forEach((c) => tags.push(foodTypeLabel(c)));
   if (filters.openNow) tags.push("เปิดอยู่ตอนนี้");
   return tags;
 }
 
-/** Rank deck restaurants by like count for the no-match fallback (wiki §2.6 #4). */
-function rankLikes(
+function buildLocalRanking(
   deck: Restaurant[],
   likes: Record<string, string[]>,
-): RankedLike[] {
-  const ranked = deck
-    .map((r) => ({ r, likes: likes[r.id]?.length ?? 0 }))
-    .filter((x) => x.likes > 0)
-    .sort((a, b) => b.likes - a.likes)
-    .slice(0, 6);
-  return ranked.length ? ranked : deck.slice(0, 4).map((r) => ({ r, likes: 0 }));
+  voterCount: number,
+): RankedResult[] {
+  return deck
+    .map<RankedResult>((r, deckIndex) => {
+      const likeCount = likes[r.id]?.length ?? 0;
+      return {
+        restaurantId: r.id,
+        rank: deckIndex + 1,
+        deckIndex,
+        likes: likeCount,
+        voterCount,
+        likePct: voterCount ? Math.round((likeCount / voterCount) * 100) : 0,
+      };
+    })
+    .sort((a, b) => {
+      if (b.likes !== a.likes) return b.likes - a.likes;
+      if (b.likePct !== a.likePct) return b.likePct - a.likePct;
+      return a.deckIndex - b.deckIndex;
+    })
+    .map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
 // ── component ────────────────────────────────────────────────────────────────
@@ -118,16 +130,20 @@ export function RestaurantMatchApp({
     ? (deck.find((r) => r.id === game.match!.restaurantId) ?? null)
     : null;
 
-  const likerPlayers: Player[] = game?.match
-    ? players.filter((p) => game.match!.likers.includes(p.id))
-    : players;
-
-  const myLiked: Restaurant[] =
-    game && userId ? deck.filter((r) => game.likes[r.id]?.includes(userId)) : [];
-
-  const nomatchRanked: RankedLike[] = game
-    ? rankLikes(deck, game.likes)
-    : [];
+  const voters = game?.roster.length ? game.roster : players.map((p) => p.id);
+  const rankedRows = game?.results.length
+    ? game.results
+    : buildLocalRanking(deck, game?.likes ?? {}, voters.length);
+  const rankedRestaurants = rankedRows
+    .map((row) => {
+      const r = deck.find((item) => item.id === row.restaurantId);
+      return r ? { ...row, r } : null;
+    })
+    .filter((row): row is RankedResult & { r: Restaurant } => row !== null);
+  const finalVoteOptions =
+    game?.finalVote?.options
+      .map((id) => deck.find((r) => r.id === id))
+      .filter((r): r is Restaurant => !!r) ?? [];
 
   // ── after-match enrichment (Place Details, New) ─────────────────────────────
   // The deck snapshot omits phone/website/hours to keep Nearby Search cheap.
@@ -216,10 +232,14 @@ export function RestaurantMatchApp({
 
   function handleDecide(restaurant: Restaurant, liked: boolean, nextCursor: number) {
     if (!roomCode || !userId) return;
-    if (liked) {
-      roomService.submitLike(roomCode, userId, restaurant.id).catch(console.error);
-    }
-    roomService.setProgress(roomCode, userId, nextCursor).catch(console.error);
+    roomService
+      .submitDecision(roomCode, userId, restaurant.id, liked, nextCursor)
+      .catch(console.error);
+  }
+
+  function handleFinalVote(restaurantId: string) {
+    if (!roomCode || !userId) return;
+    roomService.submitFinalVote(roomCode, userId, restaurantId).catch(console.error);
   }
 
   function handleRestart(expandRadius = false) {
@@ -239,6 +259,15 @@ export function RestaurantMatchApp({
     setDetailOpen(false);
     setPicked(null);
     setPreScreen("home");
+  }
+
+  function handleAdjustFilters() {
+    if (roomCode && userId) roomService.leave(roomCode, userId).catch(console.error);
+    setRoomCode(null);
+    setGame(null);
+    setDetailOpen(false);
+    setPicked(null);
+    setPreScreen("create");
   }
 
   // ── render ────────────────────────────────────────────────────────────────
@@ -306,35 +335,45 @@ export function RestaurantMatchApp({
     view = detailOpen ? (
       <DetailScreen
         r={withDetails(matchedRestaurant) ?? matchedRestaurant}
-        players={likerPlayers}
+        players={players}
         matched
         onBack={() => setDetailOpen(false)}
         onAgain={() => handleRestart()}
         onHome={handleLeave}
       />
     ) : (
-      <MatchScreen
+      <ResultsScreen
         winner={matchedRestaurant}
-        candidates={myLiked.length ? myLiked : [matchedRestaurant]}
-        players={likerPlayers}
-        reduced={reduced}
+        ranked={rankedRestaurants}
+        players={players}
         onOpen={() => setDetailOpen(true)}
         onAgain={() => handleRestart()}
         onHome={handleLeave}
-      />
-    );
-  } else if (room.status === "active" && room.deckSize > 0 && myCursor >= room.deckSize) {
-    // I've reached the end of the deck without a match (wiki §2.6 #4).
-    view = (
-      <NoMatchScreen
-        likedRanked={nomatchRanked}
-        players={players}
-        reduced={reduced}
-        onExpand={() => handleRestart(true)}
-        onRestart={handleLeave}
         onPick={(r) => setPicked(r)}
       />
     );
+  } else if (room.status === "final_vote" && game?.finalVote) {
+    view = (
+      <FinalVoteScreen
+        finalVote={game.finalVote}
+        options={finalVoteOptions}
+        players={players}
+        myUid={userId ?? ""}
+        onVote={handleFinalVote}
+      />
+    );
+  } else if (room.status === "no_match") {
+    view = (
+      <NoMatchScreen
+        players={players}
+        reduced={reduced}
+        onNewGame={handleLeave}
+        onRegenerate={() => handleRestart()}
+        onAdjust={handleAdjustFilters}
+      />
+    );
+  } else if (room.status === "active" && room.deckSize > 0 && myCursor >= room.deckSize) {
+    view = <LoadingView label="รอทุกคนปัดให้ครบเด็ค…" />;
   } else {
     // active — swiping
     const roundKey = `${deck.length}:${deck[0]?.id ?? ""}:${deck[deck.length - 1]?.id ?? ""}`;
