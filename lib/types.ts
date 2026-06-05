@@ -1,5 +1,51 @@
 // Shared domain types for the Restaurant Match app.
 
+// ── Auth ────────────────────────────────────────────────────────────────────
+
+export type AuthUser = {
+  id: string;
+  anonymous: boolean;
+  displayName?: string;
+  photoURL?: string;
+};
+
+// ── Generic async state ──────────────────────────────────────────────────────
+
+export type ApiState<T> = {
+  data: T | null;
+  loading: boolean;
+  error: Error | null;
+};
+
+// ── Room / Matching ─────────────────────────────────────────────────────────
+
+export type RoomFilters = {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+  priceMin: number;
+  priceMax: number;
+  cuisines: string[];
+  openNow: boolean;
+};
+
+export type Room = {
+  id: string;
+  code: string;
+  hostId: string;
+  players: Player[];
+  filters: RoomFilters;
+  status: "waiting" | "swiping" | "matched" | "no_match";
+  createdAt: number;
+};
+
+export type MatchResult = {
+  restaurant: Restaurant;
+  likedBy: string[];
+};
+
+// ── Domain ──────────────────────────────────────────────────────────────────
+
 export type Restaurant = {
   id: string;
   name: string;

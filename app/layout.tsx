@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Mitr, Sarabun } from "next/font/google";
 import "./globals.css";
 
@@ -20,6 +20,13 @@ export const metadata: Metadata = {
   title: "Restaurant Match — ปัดหาร้านพร้อมกัน",
   description:
     "เลิกเถียงว่าจะกินอะไร — ปัดการ์ดหาร้านพร้อมเพื่อน แล้วให้ดวงตัดสิน",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { IOSDevice } from "@/components/ios-device";
 import { CreateScreen } from "@/components/screens/create-screen";
 import { DetailScreen } from "@/components/screens/detail-screen";
 import { HomeScreen } from "@/components/screens/home-screen";
@@ -23,12 +22,6 @@ type ScreenName =
   | "match"
   | "detail"
   | "nomatch";
-
-// screens that use the dark device chrome
-const DARK_BG: Partial<Record<ScreenName, boolean>> = {
-  match: true,
-  detail: true,
-};
 
 /**
  * Restaurant Match — the full flow as a client-side state machine.
@@ -119,6 +112,7 @@ export function RestaurantMatchApp() {
         reduced={reduced}
         onOpen={() => go("detail")}
         onAgain={restart}
+        onHome={() => go("home")}
       />
     );
   } else if (screen === "detail") {
@@ -128,6 +122,7 @@ export function RestaurantMatchApp() {
         players={PLAYERS}
         onBack={() => go("match")}
         onAgain={restart}
+        onHome={() => go("home")}
       />
     );
   } else if (screen === "nomatch") {
@@ -147,7 +142,16 @@ export function RestaurantMatchApp() {
   }
 
   return (
-    <IOSDevice dark={!!DARK_BG[screen]}>
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 430,
+        height: "100dvh",
+        margin: "0 auto",
+        overflow: "hidden",
+        position: "relative",
+      }}
+    >
       <div
         key={screen}
         style={{
@@ -160,6 +164,6 @@ export function RestaurantMatchApp() {
       >
         {view}
       </div>
-    </IOSDevice>
+    </div>
   );
 }

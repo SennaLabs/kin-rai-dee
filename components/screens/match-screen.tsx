@@ -78,6 +78,7 @@ type MatchScreenProps = {
   players: Player[];
   onOpen: () => void;
   onAgain: () => void;
+  onHome: () => void;
   reduced: boolean;
   confetti?: boolean;
 };
@@ -88,6 +89,7 @@ export function MatchScreen({
   players,
   onOpen,
   onAgain,
+  onHome,
   reduced,
   confetti = true,
 }: MatchScreenProps) {
@@ -458,6 +460,22 @@ export function MatchScreen({
               }}
             >
               หาร้านอื่นต่อ
+            </button>
+            <button
+              className="rm-tap font-display"
+              onClick={onHome}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#fff",
+                fontWeight: 400,
+                fontSize: 14,
+                cursor: "pointer",
+                padding: "4px 8px",
+                opacity: 0.7,
+              }}
+            >
+              ← กลับหน้าหลัก
             </button>
           </div>
         ) : (

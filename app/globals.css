@@ -94,20 +94,22 @@ html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
 }
 
-/* warm food-themed backdrop the device floats on */
+/* Warm food-themed backdrop — visible on desktop screens wider than the app
+   max-width (430px). On mobile it sits behind the full-screen app container. */
 body {
-  min-height: 100vh;
+  min-height: 100dvh;
   background-color: #2b1b17;
   background-image:
     radial-gradient(circle at 20% 18%, rgba(255, 90, 60, 0.22), transparent 42%),
     radial-gradient(circle at 82% 12%, rgba(255, 182, 39, 0.2), transparent 40%),
     radial-gradient(circle at 50% 92%, rgba(255, 77, 46, 0.18), transparent 46%);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 24px;
+  padding: 0;
   box-sizing: border-box;
   font-family: var(--font-body);
 }

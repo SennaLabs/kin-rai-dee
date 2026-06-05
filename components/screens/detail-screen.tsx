@@ -14,9 +14,10 @@ type DetailScreenProps = {
   players: Player[];
   onBack: () => void;
   onAgain: () => void;
+  onHome: () => void;
 };
 
-export function DetailScreen({ r, players, onBack, onAgain }: DetailScreenProps) {
+export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScreenProps) {
   return (
     <Screen bg="var(--cream)">
       {/* hero photo */}
@@ -278,6 +279,23 @@ export function DetailScreen({ r, players, onBack, onAgain }: DetailScreenProps)
           }}
         >
           ↺ หาร้านอื่นต่อ / เริ่มรอบใหม่
+        </button>
+        <button
+          className="rm-tap font-display"
+          onClick={onHome}
+          style={{
+            width: "100%",
+            marginTop: 4,
+            background: "transparent",
+            border: "none",
+            color: "var(--ink-3)",
+            fontWeight: 400,
+            fontSize: 13.5,
+            cursor: "pointer",
+            padding: "4px 8px",
+          }}
+        >
+          ← กลับหน้าหลัก
         </button>
       </div>
 
