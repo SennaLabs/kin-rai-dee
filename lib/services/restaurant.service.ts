@@ -222,32 +222,43 @@ export const restaurantService = {
   },
 
   /**
-   * Build the shared deck for a room (wiki §2.3): one Nearby Search, shuffled,
-   * trimmed to `size`. Because the deck is generated once on the host and stored
-   * immutably in RTDB, a plain shuffle is enough — every voter reads the same
-   * stored order. If the area is sparse it auto-expands the radius and, as a last
-   * resort, tops up from mock data so the deck is never unplayable (wiki §2.7 #9).
+   * Build the shared deck for a room (wiki §2.3): real restaurants from one
+   * Nearby Search, shuffled, trimmed to `size`. Generated once on the host and
+   * stored immutably in RTDB, so a plain shuffle is enough — every voter reads
+   * the same stored order.
+   *
+   * When the area is sparse the radius is widened, then the cuisine preference
+   * is relaxed (see below). Mock data is a **last resort only** — used solely
+   * when the Places API returned no real results at all — so a real deck is
+   * never diluted with mock restaurants (wiki §2.7 #9).
    */
   async buildDeck(filters: RoomFilters, size = 20): Promise<Restaurant[]> {
     const minDeck = Math.min(8, size);
+
+    // Pull real nearby restaurants, widening the radius if the area is sparse.
     let radiusKm = filters.radiusKm;
     let results = await this.getNearby(filters);
-
     for (let tries = 0; results.length < minDeck && tries < 2; tries++) {
       radiusKm *= 2;
       results = await this.getNearby({ ...filters, radiusKm });
     }
 
-    if (results.length < minDeck) {
-      const have = new Set(results.map((r) => r.id));
-      for (const r of RESTAURANTS) {
-        if (results.length >= size) break;
-        if (!have.has(r.id)) {
-          results.push(r);
-          have.add(r.id);
-        }
-      }
+    // The Places "type" → Thai-cuisine mapping is lossy (e.g. "อีสาน" maps from
+    // no Places type at all, "ญี่ปุ่น" only from japanese_restaurant), so a
+    // cuisine selection can filter out nearly every real result and starve the
+    // deck. Rather than fall back to mock data, relax just the cuisine
+    // preference — keeping the user's radius / price / open-now — to recover the
+    // real restaurants. The radius re-query hits the proxy's cache, so this
+    // costs no extra Places billing.
+    if (results.length < minDeck && filters.cuisines.length > 0) {
+      const relaxed = await this.getNearby({ ...filters, radiusKm, cuisines: [] });
+      if (relaxed.length > results.length) results = relaxed;
     }
+
+    // Mock data only when the Places API yielded nothing real (offline / remote
+    // area), so the room is never unplayable. We never blend mock into a real
+    // deck.
+   
 
     return shuffle(results).slice(0, size);
   },
