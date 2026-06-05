@@ -1,18 +1,23 @@
 import { RESTAURANTS } from "@/lib/data";
 import type { Restaurant, RoomFilters } from "@/lib/types";
 
-// ── Places API response shape (legacy Nearby Search) ────────────────────────
+// ── Compact shapes returned by our Places API (New) proxy routes ─────────────
+// The /api/places/* route handlers project Google's verbose response down to
+// just these fields (see app/api/places/*/route.ts), so the payload that
+// reaches the client — and gets stored in RTDB — stays small.
 
-type PlaceResult = {
-  place_id: string;
+type NearbyPlace = {
+  id: string;
   name: string;
+  lat: number;
+  lng: number;
   rating?: number;
-  user_ratings_total?: number;
-  price_level?: number;
-  geometry: { location: { lat: number; lng: number } };
-  opening_hours?: { open_now: boolean };
-  vicinity?: string;
+  reviews?: number;
+  price?: number; // 1–4
+  open?: boolean;
   types?: string[];
+  addr?: string;
+  photo?: string; // photo resource name: places/{id}/photos/{ref}
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -94,32 +99,31 @@ const GRADIENTS: [string, string][] = [
 ];
 
 function mapPlaceToRestaurant(
-  place: PlaceResult,
+  place: NearbyPlace,
   userLat: number,
   userLng: number,
   index: number,
 ): Restaurant {
   const cuisine = cuisineFromTypes(place.types ?? []);
-  const placeLat = place.geometry.location.lat;
-  const placeLng = place.geometry.location.lng;
   return {
-    id: place.place_id,
+    id: place.id,
     name: place.name,
     cuisine,
     rating: place.rating ?? 4.0,
-    reviews: place.user_ratings_total ?? 0,
-    price: Math.max(1, Math.min(4, place.price_level ?? 2)),
-    dist: haversineKm(userLat, userLng, placeLat, placeLng),
-    open: place.opening_hours?.open_now ?? true,
+    reviews: place.reviews ?? 0,
+    price: Math.max(1, Math.min(4, place.price ?? 2)),
+    dist: haversineKm(userLat, userLng, place.lat, place.lng),
+    open: place.open ?? true,
     hours: "ดูใน Google Maps",
-    addr: place.vicinity ?? "",
+    addr: place.addr ?? "",
     phone: "",
     tags: [cuisine],
     emoji: CUISINE_EMOJIS[cuisine] ?? "🍽️",
     g: GRADIENTS[index % GRADIENTS.length],
-    placeId: place.place_id,
-    lat: placeLat,
-    lng: placeLng,
+    placeId: place.id,
+    lat: place.lat,
+    lng: place.lng,
+    photoName: place.photo,
   };
 }
 
@@ -129,11 +133,12 @@ export const restaurantService = {
   async getNearby(filters: RoomFilters): Promise<Restaurant[]> {
     const radiusMeters = Math.round(filters.radiusKm * 1000);
 
+    // Nearby Search (New) has no "open now" filter, so we don't pass one — the
+    // openNow field comes back per-place and we filter on it client-side below.
     const params = new URLSearchParams({
       lat: String(filters.lat),
       lng: String(filters.lng),
       radius: String(radiusMeters),
-      ...(filters.openNow ? { openNow: "true" } : {}),
     });
 
     let results: Restaurant[] = [];
@@ -147,7 +152,7 @@ export const restaurantService = {
         throw new Error(`Places API: ${data.status} — ${data.error_message ?? ""}`);
       }
 
-      const places: PlaceResult[] = data.results ?? [];
+      const places: NearbyPlace[] = data.results ?? [];
       results = places.map((p, i) =>
         mapPlaceToRestaurant(p, filters.lat, filters.lng, i),
       );
@@ -167,8 +172,10 @@ export const restaurantService = {
       });
     }
 
-    // Apply price and cuisine filters to Places API results as well
+    // Apply open-now, price and cuisine filters to the results (the New Nearby
+    // Search can't pre-filter these, and the mock fallback already matches).
     return results.filter((r) => {
+      if (filters.openNow && !r.open) return false;
       if (r.price < filters.priceMin || r.price > filters.priceMax) return false;
       if (
         filters.cuisines.length > 0 &&
@@ -183,6 +190,35 @@ export const restaurantService = {
   async getById(id: string): Promise<Restaurant | null> {
     // Mock data lookup (for development / offline fallback)
     return RESTAURANTS.find((r) => r.id === id) ?? null;
+  },
+
+  /**
+   * Fetch the extra fields the deck didn't carry (phone, website, full address,
+   * opening hours) for the after-match card — Place Details (New), proxied and
+   * cached by /api/places/details. Returns a partial Restaurant to merge over
+   * the deck snapshot; resolves to {} on any failure so the UI degrades softly.
+   */
+  async getDetails(placeId: string): Promise<Partial<Restaurant>> {
+    try {
+      const res = await fetch(`/api/places/details?id=${encodeURIComponent(placeId)}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const d = await res.json();
+      if (d.status && d.status !== "OK") {
+        throw new Error(`Place Details: ${d.status} — ${d.error_message ?? ""}`);
+      }
+
+      const out: Partial<Restaurant> = {};
+      if (typeof d.phone === "string" && d.phone) out.phone = d.phone;
+      if (typeof d.website === "string" && d.website) out.website = d.website;
+      if (typeof d.addr === "string" && d.addr) out.addr = d.addr;
+      if (typeof d.hours === "string" && d.hours) out.hours = d.hours;
+      if (typeof d.open === "boolean") out.open = d.open;
+      return out;
+    } catch (err) {
+      console.warn("[restaurantService] Place Details failed:", err);
+      return {};
+    }
   },
 
   /**

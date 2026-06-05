@@ -128,6 +128,13 @@ export type Restaurant = {
   /** Coordinates — present when data comes from Places API */
   lat?: number;
   lng?: number;
+  /**
+   * Places API (New) photo resource name (`places/{id}/photos/{ref}`). Resolved
+   * to an image lazily through /api/places/photo; the gradient is the fallback.
+   */
+  photoName?: string;
+  /** Website URL — populated by Place Details (New) on the after-match card. */
+  website?: string;
 };
 
 /** A restaurant ranked by how many players liked it (No-Match screen). */

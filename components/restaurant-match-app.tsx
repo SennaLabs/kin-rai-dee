@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CreateScreen } from "@/components/screens/create-screen";
 import { DetailScreen } from "@/components/screens/detail-screen";
 import { HomeScreen } from "@/components/screens/home-screen";
@@ -13,6 +13,7 @@ import { Screen } from "@/components/ui/screen";
 import { useReducedMotion } from "@/components/ui/motion";
 import { priceStr } from "@/lib/data";
 import { authService } from "@/lib/services/auth.service";
+import { restaurantService } from "@/lib/services/restaurant.service";
 import { roomService } from "@/lib/services/room.service";
 import type { GameState, Player, RankedLike, Restaurant, RoomFilters } from "@/lib/types";
 
@@ -127,6 +128,34 @@ export function RestaurantMatchApp({
   const nomatchRanked: RankedLike[] = game
     ? rankLikes(deck, game.likes)
     : [];
+
+  // ── after-match enrichment (Place Details, New) ─────────────────────────────
+  // The deck snapshot omits phone/website/hours to keep Nearby Search cheap.
+  // When a detail card is shown, lazily fetch those fields once per placeId and
+  // merge them over the deck restaurant. One call per match, cached server-side.
+  const detailTarget = picked ?? (detailOpen ? matchedRestaurant : null);
+  const [details, setDetails] = useState<Record<string, Partial<Restaurant>>>({});
+  const fetchedDetails = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const placeId = detailTarget?.placeId;
+    if (!placeId || fetchedDetails.current.has(placeId)) return;
+    fetchedDetails.current.add(placeId);
+    let alive = true;
+    restaurantService.getDetails(placeId).then((d) => {
+      if (alive && Object.keys(d).length > 0) {
+        setDetails((m) => ({ ...m, [placeId]: d }));
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [detailTarget?.placeId]);
+
+  function withDetails(r: Restaurant | null): Restaurant | null {
+    const extra = r?.placeId ? details[r.placeId] : undefined;
+    return r && extra ? { ...r, ...extra } : r;
+  }
 
   // ── handlers ──────────────────────────────────────────────────────────────
 
@@ -252,7 +281,7 @@ export function RestaurantMatchApp({
     // No-match: user tapped a specific restaurant to inspect.
     view = (
       <DetailScreen
-        r={picked}
+        r={withDetails(picked) ?? picked}
         players={players}
         onBack={() => setPicked(null)}
         onAgain={() => handleRestart()}
@@ -275,7 +304,7 @@ export function RestaurantMatchApp({
   } else if (room.status === "matched" && matchedRestaurant) {
     view = detailOpen ? (
       <DetailScreen
-        r={matchedRestaurant}
+        r={withDetails(matchedRestaurant) ?? matchedRestaurant}
         players={likerPlayers}
         onBack={() => setDetailOpen(false)}
         onAgain={() => handleRestart()}

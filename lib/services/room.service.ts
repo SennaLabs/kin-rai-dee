@@ -180,10 +180,12 @@ function findUnanimous(state: GameState): string | null {
 export const roomService = {
   /** Create a room in the `lobby` state. Returns the unique 4-char code. */
   async create(hostPlayer: Player, filters: RoomFilters): Promise<string> {
-    // Find a code not currently in use among active rooms.
+    // Find a code not currently in use among active rooms. We probe meta/status
+    // (the one publicly-readable node — see database.rules.json) rather than the
+    // whole meta, so the existence check works before we're a room member.
     let code = generateCode();
     for (let i = 0; i < MAX_CODE_TRIES; i++) {
-      const exists = await get(ref(db(), `rooms/${code}/meta`));
+      const exists = await get(ref(db(), `rooms/${code}/meta/status`));
       if (!exists.exists()) break;
       code = generateCode();
     }
@@ -222,13 +224,14 @@ export const roomService = {
     userId: string,
   ): Promise<string> {
     const normalized = code.toUpperCase();
-    const metaSnap = await get(ref(db(), `rooms/${normalized}/meta`));
-    if (!metaSnap.exists()) {
+    // Read only meta/status — the single node a non-member is allowed to read
+    // (database.rules.json) — to confirm the room exists and is still joinable.
+    const statusSnap = await get(ref(db(), `rooms/${normalized}/meta/status`));
+    if (!statusSnap.exists()) {
       throw new Error(`ไม่พบห้องรหัส "${normalized}" หรือโค้ดหมดอายุ`);
     }
 
-    const meta = metaSnap.val() as RawMeta;
-    if (meta.status !== "lobby") {
+    if ((statusSnap.val() as RoomStatus) !== "lobby") {
       throw new Error("รอบนี้เริ่มไปแล้ว — เริ่มรอบใหม่ได้เลย");
     }
 
@@ -343,33 +346,36 @@ export const roomService = {
   },
 
   /**
-   * Leave the room. Removes the participant; if the host leaves during lobby the
-   * crown migrates to the earliest joiner (wiki §2.7 #5). An empty room is
-   * deleted so its code recycles.
+   * Leave the room. Reads the room *first* — the member-only read rule
+   * (database.rules.json) means we must still be a member to see it — then
+   * removes our own participant and, if we were the host, migrates the crown to
+   * the earliest joiner via `meta/hostId` in one atomic update (wiki §2.7 #5).
+   * The displayed host is derived from `meta.hostId`, so migration never writes
+   * another member's node. When the last member (always the host) leaves, the
+   * whole room is deleted so its code recycles (wiki §2.7 #8).
    */
   async leave(code: string, uid: string): Promise<void> {
-    await remove(ref(db(), `rooms/${code}/participants/${uid}`));
-
     const snap = await get(ref(db(), `rooms/${code}`));
     if (!snap.exists()) return;
     const raw = snap.val() as RawRoom;
-    const remaining = raw.participants ?? {};
-    const remainingIds = Object.keys(remaining);
+    const participants = raw.participants ?? {};
+    const remainingIds = Object.keys(participants).filter((id) => id !== uid);
 
+    // Last one out — tear the room down (the last leaver is always the host).
     if (remainingIds.length === 0) {
       await remove(ref(db(), `rooms/${code}`));
       return;
     }
 
+    const updates: Record<string, unknown> = { [`participants/${uid}`]: null };
     if (raw.meta.hostId === uid) {
-      const newHost = remainingIds.sort(
-        (a, b) => asNumber(remaining[a]?.joinedAt, 0) - asNumber(remaining[b]?.joinedAt, 0),
+      updates["meta/hostId"] = remainingIds.sort(
+        (a, b) =>
+          asNumber(participants[a]?.joinedAt, 0) -
+          asNumber(participants[b]?.joinedAt, 0),
       )[0];
-      await update(ref(db(), `rooms/${code}`), {
-        "meta/hostId": newHost,
-        [`participants/${newHost}/host`]: true,
-      });
     }
+    await update(ref(db(), `rooms/${code}`), updates);
   },
 
   /**
