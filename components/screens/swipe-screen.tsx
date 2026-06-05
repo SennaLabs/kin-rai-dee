@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { XIcon } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { RoundButton } from "@/components/ui/buttons";
 import { FoodPhoto } from "@/components/ui/food-photo";
@@ -158,7 +159,7 @@ function SwipeCard({ r, drag, top, depth, exiting }: SwipeCardProps) {
           gap: 8,
         }}
       >
-        ✕ ผ่าน
+        <XIcon size={26} weight="bold" />ผ่าน
       </div>
 
       {/* info */}

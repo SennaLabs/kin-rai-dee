@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { MagnifyingGlassIcon, MapPinIcon } from "@phosphor-icons/react";
 import { BackHeader } from "@/components/ui/back-header";
 import { Chip, PrimaryButton } from "@/components/ui/buttons";
 import { Screen } from "@/components/ui/screen";
@@ -116,7 +117,7 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
                 flexShrink: 0,
               }}
             >
-              📍
+              <MapPinIcon size={22} weight="fill" color="#fff" />
             </div>
             <div style={{ flex: 1 }}>
               <div
@@ -162,7 +163,7 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
                 flexShrink: 0,
               }}
             >
-              🔎
+              <MagnifyingGlassIcon size={22} weight="bold" color="var(--ink-2)" />
             </div>
             <div style={{ flex: 1 }}>
               <div

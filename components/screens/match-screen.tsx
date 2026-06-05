@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrowLeftIcon, ArrowRightIcon } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { Confetti } from "@/components/ui/confetti";
@@ -443,7 +444,9 @@ export function MatchScreen({
               style={{ color: "var(--cta)" }}
               onClick={onOpen}
             >
-              ดูรายละเอียดร้าน →
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                ดูรายละเอียดร้าน <ArrowRightIcon size={20} weight="bold" />
+              </span>
             </PrimaryButton>
             <button
               className="rm-tap font-display"
@@ -475,7 +478,9 @@ export function MatchScreen({
                 opacity: 0.7,
               }}
             >
-              ← กลับหน้าหลัก
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <ArrowLeftIcon size={16} weight="bold" /> กลับหน้าหลัก
+              </span>
             </button>
           </div>
         ) : (

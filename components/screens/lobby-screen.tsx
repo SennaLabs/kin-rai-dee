@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { CheckIcon, MapPinIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { buzz } from "@/components/ui/motion";
@@ -21,7 +22,13 @@ type LobbyScreenProps = {
   roomSettings?: string[];
 };
 
-const DEFAULT_SETTINGS = ["📍 2 กม.", "฿–฿฿", "อีสาน", "ญี่ปุ่น", "เปิดอยู่ตอนนี้"];
+const DEFAULT_SETTINGS = [
+  "📍 2 กม.",
+  "฿–฿฿",
+  "อีสาน",
+  "ญี่ปุ่น",
+  "เปิดอยู่ตอนนี้",
+];
 
 export function LobbyScreen({
   players,
@@ -45,10 +52,16 @@ export function LobbyScreen({
 
   function share() {
     const link =
-      typeof window !== "undefined" ? `${window.location.origin}/j/${code}` : code;
+      typeof window !== "undefined"
+        ? `${window.location.origin}/j/${code}`
+        : code;
     if (navigator.share) {
       navigator
-        .share({ title: "เข้าห้องกินไรดี", text: `โค้ดห้อง: ${code}`, url: link })
+        .share({
+          title: "เข้าห้องกินไรดี",
+          text: `โค้ดห้อง: ${code}`,
+          url: link,
+        })
         .catch(() => {});
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(link).catch(() => {});
@@ -81,7 +94,9 @@ export function LobbyScreen({
       >
         ← ออก
       </button>
-      <div style={{ flexShrink: 0, padding: "54px 22px 0", textAlign: "center" }}>
+      <div
+        style={{ flexShrink: 0, padding: "54px 22px 0", textAlign: "center" }}
+      >
         <div
           style={{
             fontSize: 14,
@@ -125,7 +140,9 @@ export function LobbyScreen({
           }}
         >
           {copied ? (
-            <>✓ คัดลอกลิงก์แล้ว</>
+            <>
+              <CheckIcon size={16} weight="bold" /> คัดลอกลิงก์แล้ว
+            </>
           ) : (
             <>
               <svg
@@ -208,7 +225,11 @@ export function LobbyScreen({
                 <div style={{ flex: 1 }}>
                   <div
                     className="font-display"
-                    style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: "var(--ink)",
+                    }}
                   >
                     {p.name}{" "}
                     {p.me && (
@@ -317,16 +338,27 @@ export function LobbyScreen({
               ตั้งค่าห้อง
             </span>
             <span
-              style={{ fontSize: 12, color: "var(--cta)", fontWeight: 600 }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 12,
+                color: "var(--cta)",
+                fontWeight: 600,
+              }}
             >
-              โฮสต์แก้ได้ ✎
+              โฮสต์แก้ได้ <PencilSimpleIcon size={12} weight="bold" />
             </span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            {(roomSettings ?? DEFAULT_SETTINGS).map((t) => (
+            
+            {(roomSettings ?? DEFAULT_SETTINGS).map((t, i) => (
               <span
-                key={t}
+                key={i}
                 style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
                   fontSize: 12.5,
                   fontWeight: 600,
                   color: "var(--ink-2)",
@@ -371,11 +403,28 @@ export function LobbyScreen({
             transition: "all .15s",
           }}
         >
-          {meReady ? "✓ พร้อมแล้ว" : "พร้อม"}
+          {meReady ? (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
+              <CheckIcon size={18} weight="bold" /> พร้อมแล้ว
+            </span>
+          ) : (
+            "พร้อม"
+          )}
         </button>
         <div style={{ flex: 1.3 }}>
           {isHost ? (
-            <PrimaryButton disabled={!canStart} onClick={onStart} ariaLabel="เริ่มเกม">
+            <PrimaryButton
+              disabled={!canStart}
+              onClick={onStart}
+              ariaLabel="เริ่มเกม"
+            >
               {canStart ? "เริ่มเกม 🚀" : `รออีก ${2 - players.length} คน`}
             </PrimaryButton>
           ) : (
