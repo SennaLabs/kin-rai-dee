@@ -10,9 +10,9 @@ type HomeScreenProps = {
 };
 
 const STEPS = [
-  { e: "🏠", t: "สร้างห้อง", d: "ตั้งค่ารัศมี ราคา ประเภท" },
-  { e: "🔗", t: "แชร์โค้ด", d: "ชวนเพื่อนเข้าด้วยโค้ด 4 หลัก" },
-  { e: "🔥", t: "ปัดพร้อมกัน", d: "ชอบตรงกัน = แมตช์!" },
+  { t: "สร้างห้อง", d: "ตั้งรัศมี ราคา ประเภท" },
+  { t: "แชร์โค้ด", d: "ชวนเพื่อนด้วยโค้ด 4 หลัก" },
+  { t: "ปัดพร้อมกัน", d: "ชอบตรงกัน = แมตช์" },
 ];
 
 // [emoji, left, top, animation-delay]
@@ -35,8 +35,7 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
           inset: 0,
           overflow: "hidden",
           pointerEvents: "none",
-        }}
-      >
+        }}>
         {FLOATS.map(([e, l, t, d], i) => (
           <span
             key={i}
@@ -49,8 +48,7 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
               animation: reduced
                 ? "none"
                 : `rmFloat ${4 + i * 0.4}s ease-in-out ${d}s infinite`,
-            }}
-          >
+            }}>
             {e}
           </span>
         ))}
@@ -66,8 +64,7 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
           padding: "0 30px",
           position: "relative",
           zIndex: 2,
-        }}
-      >
+        }}>
         {/* mascot */}
         <div
           style={{
@@ -82,8 +79,7 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
             boxShadow: "0 18px 38px rgba(230,57,70,0.4)",
             marginBottom: 22,
             animation: reduced ? "none" : "rmFloat 3.6s ease-in-out infinite",
-          }}
-        >
+          }}>
           🍽️
         </div>
 
@@ -91,14 +87,13 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
           className="font-display"
           style={{
             margin: 0,
-            fontSize: 40,
+            fontSize: 46,
             fontWeight: 700,
             color: "var(--ink)",
             lineHeight: 1.05,
             textAlign: "center",
-          }}
-        >
-          Restaurant <span style={{ color: "var(--cta)" }}>Match</span>
+          }}>
+          ไม่รู้<span style={{ color: "var(--cta)" }}>กินไร?</span>
         </h1>
         <p
           style={{
@@ -108,37 +103,65 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
             textAlign: "center",
             lineHeight: 1.45,
             maxWidth: 300,
-          }}
-        >
-          เลิกเถียงว่าจะกินอะไร —<br />
-          ปัดหาร้านพร้อมกัน แล้วให้ดวงตัดสิน 🎰
+          }}>
+          เถียงกันทุกวันว่าจะกินไหน
+          <br />
+          มาปัดหาร้านพร้อมกัน จบในห้องเดียว
         </p>
       </div>
 
       {/* how it works */}
-      <div style={{ padding: "0 24px 4px", position: "relative", zIndex: 2 }}>
-        <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
+      <div style={{ padding: "0 30px 4px", position: "relative", zIndex: 2 }}>
+        <div style={{ position: "relative", display: "flex" }}>
+          {/* dashed connector behind the step badges */}
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 16,
+              left: "16.667%",
+              right: "16.667%",
+              borderTop: "2px dashed rgba(255,90,60,0.32)",
+              zIndex: 0,
+            }}
+          />
           {STEPS.map((s, i) => (
             <div
               key={i}
               style={{
                 flex: 1,
+                position: "relative",
+                zIndex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
                 textAlign: "center",
-                background: "rgba(255,255,255,0.6)",
-                borderRadius: 18,
-                padding: "12px 6px",
-              }}
-            >
-              <div style={{ fontSize: 26 }}>{s.e}</div>
+              }}>
+              <div
+                className="font-display"
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: "50%",
+                  background: "var(--cream)",
+                  border: "2px solid var(--coral)",
+                  color: "var(--cta)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 17,
+                  fontWeight: 700,
+                }}>
+                {i + 1}
+              </div>
               <div
                 className="font-display"
                 style={{
                   fontSize: 13.5,
                   fontWeight: 600,
                   color: "var(--ink)",
-                  marginTop: 4,
-                }}
-              >
+                  marginTop: 8,
+                }}>
                 {s.t}
               </div>
               <div
@@ -147,8 +170,8 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
                   color: "var(--ink-3)",
                   marginTop: 2,
                   lineHeight: 1.25,
-                }}
-              >
+                  maxWidth: 92,
+                }}>
                 {s.d}
               </div>
             </div>
@@ -166,9 +189,8 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
           gap: 12,
           position: "relative",
           zIndex: 2,
-        }}
-      >
-        <PrimaryButton onClick={onCreate}>สร้างห้อง 🎉</PrimaryButton>
+        }}>
+        <PrimaryButton onClick={onCreate}>สร้างห้อง</PrimaryButton>
         <SecondaryButton onClick={onJoin}>เข้าร่วมห้อง</SecondaryButton>
       </div>
     </Screen>

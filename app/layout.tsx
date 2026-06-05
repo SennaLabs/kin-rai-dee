@@ -17,9 +17,9 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "Restaurant Match — ปัดหาร้านพร้อมกัน",
+  title: "ไม่รู้กินไร — ปัดหาร้านพร้อมกัน",
   description:
-    "เลิกเถียงว่าจะกินอะไร — ปัดการ์ดหาร้านพร้อมเพื่อน แล้วให้ดวงตัดสิน",
+    "เถียงกันทุกวันว่าจะกินไหน จบในห้องเดียว — ปัดการ์ดหาร้านพร้อมเพื่อน",
 };
 
 export const viewport: Viewport = {

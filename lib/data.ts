@@ -199,10 +199,42 @@ export const RESTAURANTS: Restaurant[] = [
 
 // Players in the room (current user = me).
 export const PLAYERS: Player[] = [
-  { id: "p_me", name: "คุณ", emoji: "🦊", host: true, me: true, ready: false, connected: true },
-  { id: "p2", name: "ฟ้า", emoji: "🐰", host: false, me: false, ready: false, connected: true },
-  { id: "p3", name: "บาส", emoji: "🐻", host: false, me: false, ready: false, connected: true },
-  { id: "p4", name: "มิ้น", emoji: "🐱", host: false, me: false, ready: false, connected: true },
+  {
+    id: "p_me",
+    name: "คุณ",
+    emoji: "🦊",
+    host: true,
+    me: true,
+    ready: false,
+    connected: true,
+  },
+  {
+    id: "p2",
+    name: "ฟ้า",
+    emoji: "🐰",
+    host: false,
+    me: false,
+    ready: false,
+    connected: true,
+  },
+  {
+    id: "p3",
+    name: "บาส",
+    emoji: "🐻",
+    host: false,
+    me: false,
+    ready: false,
+    connected: true,
+  },
+  {
+    id: "p4",
+    name: "มิ้น",
+    emoji: "🐱",
+    host: false,
+    me: false,
+    ready: false,
+    connected: true,
+  },
 ];
 
 // Google Places API (New) Table A Food and Drink types used in Create Room.
@@ -237,7 +269,9 @@ export const FOOD_PLACE_TYPE_OPTIONS: FoodPlaceTypeOption[] = [
   { type: "food_court", label: "ฟู้ดคอร์ท", emoji: "🍱" },
 ];
 
-export const FOOD_PLACE_TYPES = FOOD_PLACE_TYPE_OPTIONS.map((option) => option.type);
+export const FOOD_PLACE_TYPES = FOOD_PLACE_TYPE_OPTIONS.map(
+  (option) => option.type,
+);
 
 const FOOD_PLACE_TYPE_SET = new Set(FOOD_PLACE_TYPES);
 
@@ -246,30 +280,21 @@ export function isFoodPlaceType(type: string): boolean {
 }
 
 export function foodTypeLabel(type: string): string {
-  return FOOD_PLACE_TYPE_OPTIONS.find((option) => option.type === type)?.label ?? type;
+  return (
+    FOOD_PLACE_TYPE_OPTIONS.find((option) => option.type === type)?.label ??
+    type
+  );
 }
 
 export function foodTypeEmoji(type: string): string {
-  return FOOD_PLACE_TYPE_OPTIONS.find((option) => option.type === type)?.emoji ?? "🍽️";
+  return (
+    FOOD_PLACE_TYPE_OPTIONS.find((option) => option.type === type)?.emoji ??
+    "🍽️"
+  );
 }
 
 // Legacy alias for old call sites. Values are Google place type ids, not mock labels.
 export const CUISINES = FOOD_PLACE_TYPES;
-
-export const AVATAR_CHOICES = [
-  "🦊",
-  "🐰",
-  "🐻",
-  "🐱",
-  "🐼",
-  "🐧",
-  "🐯",
-  "🦄",
-  "🍕",
-  "🍜",
-  "🌮",
-  "🍙",
-];
 
 /** price tier → ฿ string */
 export function priceStr(n: number): string {
