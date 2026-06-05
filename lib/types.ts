@@ -1,4 +1,17 @@
 // Shared domain types for the Restaurant Match app.
+//
+// The live game runs on Firebase Realtime Database (RTDB) — see
+// .claude/wiki.md §3.2/§3.3. The RTDB tree under rooms/{code} is:
+//
+//   meta/         status, hostId, createdAt, expiresAt, voterCount, deckSize, filters, roster
+//   participants/{uid}   name, emoji, host, joinedAt, ready, connected
+//   deck/{index}         immutable Restaurant snapshot, set once on start
+//   likes/{restaurantId}/{uid}   ts        (like only; pass is not stored)
+//   progress/{uid}       cursor index
+//   match/               restaurantId, at, likers/{uid}: true   (first-writer-wins)
+//
+// The types below are the *domain* shapes the UI consumes; room.service maps
+// the raw RTDB tree to/from them.
 
 // ── Auth ────────────────────────────────────────────────────────────────────
 
@@ -22,6 +35,8 @@ export type ApiState<T> = {
 export type RoomFilters = {
   lat: number;
   lng: number;
+  /** human-readable place label (manual pin / geocoding) */
+  label?: string;
   radiusKm: number;
   priceMin: number;
   priceMax: number;
@@ -29,24 +44,68 @@ export type RoomFilters = {
   openNow: boolean;
 };
 
+/** Room lifecycle — lobby → active → matched → ended (wiki §3.3). */
+export type RoomStatus = "lobby" | "active" | "matched" | "ended";
+
 export type Room = {
+  /** RTDB key — identical to `code`. */
   id: string;
   code: string;
   hostId: string;
   players: Player[];
   filters: RoomFilters;
-  status: "waiting" | "swiping" | "matched" | "no_match";
+  status: RoomStatus;
   createdAt: number;
+  /** room TTL — when the room becomes eligible for cleanup (wiki §2.7 #8). */
+  expiresAt: number;
+  /** size of the locked roster at game start; 0 while in lobby. */
+  voterCount: number;
+  /** number of cards in the shared deck; 0 while in lobby. */
+  deckSize: number;
 };
 
+export type Player = {
+  id: string;
+  name: string;
+  emoji: string;
+  host: boolean;
+  /** true for the current user (derived from auth uid) */
+  me: boolean;
+  ready: boolean;
+  /** RTDB presence flag, flipped to false via onDisconnect (wiki §3.7) */
+  connected: boolean;
+};
+
+/** A declared match — set once, first-writer-wins via transaction (wiki §3.4). */
 export type MatchResult = {
-  restaurant: Restaurant;
-  likedBy: string[];
+  /** the matched Restaurant's id (== Google place_id when from Places API) */
+  restaurantId: string;
+  likers: string[];
+  at: number;
+};
+
+/**
+ * Full live snapshot of a room, assembled from the RTDB tree. This is what the
+ * app subscribes to and routes screens from.
+ */
+export type GameState = {
+  room: Room;
+  /** shared, immutable deck — every voter sees the same cards in the same order */
+  deck: Restaurant[];
+  /** restaurantId → uids that liked it (pass is not recorded) */
+  likes: Record<string, string[]>;
+  /** uid → how many cards that player has swiped (resume cursor) */
+  progress: Record<string, number>;
+  /** the declared match, or null while still swiping */
+  match: MatchResult | null;
+  /** uids locked into the round at start (the voters) */
+  roster: string[];
 };
 
 // ── Domain ──────────────────────────────────────────────────────────────────
 
 export type Restaurant = {
+  /** stable like key — equals the Google place_id when data comes from Places */
   id: string;
   name: string;
   cuisine: string;
@@ -64,16 +123,11 @@ export type Restaurant = {
   emoji: string;
   /** [from, to] gradient stops for the placeholder photo */
   g: [string, string];
-};
-
-export type Player = {
-  id: string;
-  name: string;
-  emoji: string;
-  host: boolean;
-  /** true for the current user */
-  me: boolean;
-  ready: boolean;
+  /** Google Places place_id — present when data comes from Places API */
+  placeId?: string;
+  /** Coordinates — present when data comes from Places API */
+  lat?: number;
+  lng?: number;
 };
 
 /** A restaurant ranked by how many players liked it (No-Match screen). */

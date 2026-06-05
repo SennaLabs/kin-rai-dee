@@ -16,6 +16,32 @@ import { Stars } from "@/components/ui/stars";
 import { priceStr } from "@/lib/data";
 import type { Player, Restaurant } from "@/lib/types";
 
+const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
+
+function staticMapSrc(r: Restaurant): string {
+  const base = "https://maps.googleapis.com/maps/api/staticmap";
+  const marker =
+    r.lat && r.lng ? `${r.lat},${r.lng}` : encodeURIComponent(r.addr);
+  const center =
+    r.lat && r.lng ? `${r.lat},${r.lng}` : encodeURIComponent(r.addr);
+  return `${base}?center=${center}&zoom=16&size=800x240&scale=2&markers=color:red%7C${marker}&key=${MAPS_KEY}&language=th`;
+}
+
+function mapsDeepLink(r: Restaurant): string {
+  if (r.placeId)
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name)}&query_place_id=${r.placeId}`;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.name + " " + r.addr)}`;
+}
+
+// Directions deep link for the primary "ไปกันเลย" CTA (wiki §2.6) — opens the
+// Maps app for navigation; no Places API cost since it's just a URL.
+function mapsDirLink(r: Restaurant): string {
+  const dest = encodeURIComponent(r.name + (r.addr ? " " + r.addr : ""));
+  if (r.placeId)
+    return `https://www.google.com/maps/dir/?api=1&destination=${dest}&destination_place_id=${r.placeId}`;
+  return `https://www.google.com/maps/dir/?api=1&destination=${dest}`;
+}
+
 type DetailScreenProps = {
   r: Restaurant;
   players: Player[];
@@ -208,6 +234,11 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
         <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
           <MiniAction
             label="โทร"
+            onClick={
+              r.phone
+                ? () => { window.location.href = `tel:${r.phone}`; }
+                : () => { window.open(mapsDeepLink(r), "_blank", "noopener,noreferrer"); }
+            }
             icon={
               <svg
                 width="18"
@@ -224,7 +255,8 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
             }
           />
           <MiniAction
-            label="ดูเมนู / เว็บ"
+            label="ดูบน Maps"
+            onClick={() => window.open(mapsDeepLink(r), "_blank", "noopener,noreferrer")}
             icon={
               <svg
                 width="18"
@@ -236,12 +268,21 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M3 5h18M3 12h18M3 19h12" />
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                <circle cx="12" cy="10" r="3" />
               </svg>
             }
           />
           <MiniAction
             label="แชร์"
+            onClick={() => {
+              const text = `${r.name} — ${mapsDeepLink(r)}`;
+              if (navigator.share) {
+                navigator.share({ title: r.name, url: mapsDeepLink(r), text }).catch(() => {});
+              } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).catch(() => {});
+              }
+            }}
             icon={
               <svg
                 width="18"
@@ -262,13 +303,29 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
           />
         </div>
 
-        {/* map placeholder */}
-        <div
-          className="rm-ph"
-          style={{ marginTop: 14, height: 120, borderRadius: 18 }}
-        >
-          <span className="rm-ph-label">map preview · {r.addr}</span>
-        </div>
+        {/* map preview */}
+        {MAPS_KEY ? (
+          <img
+            src={staticMapSrc(r)}
+            alt={`แผนที่ตำแหน่ง ${r.name}`}
+            loading="lazy"
+            style={{
+              display: "block",
+              marginTop: 14,
+              width: "100%",
+              height: 120,
+              objectFit: "cover",
+              borderRadius: 18,
+            }}
+          />
+        ) : (
+          <div
+            className="rm-ph"
+            style={{ marginTop: 14, height: 120, borderRadius: 18 }}
+          >
+            <span className="rm-ph-label">map preview · {r.addr}</span>
+          </div>
+        )}
 
         <button
           className="rm-tap font-display"
@@ -319,7 +376,7 @@ export function DetailScreen({ r, players, onBack, onAgain, onHome }: DetailScre
       >
         <PrimaryButton
           color="linear-gradient(180deg,#FF6B4A,#E63946)"
-          onClick={() => alert("เปิด Google Maps นำทางไป " + r.name)}
+          onClick={() => window.open(mapsDirLink(r), "_blank", "noopener,noreferrer")}
         >
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
             ไปกันเลย · นำทาง <NavigationArrowIcon size={20} weight="bold" />

@@ -10,40 +10,62 @@ import type { Player } from "@/lib/types";
 
 type LobbyScreenProps = {
   players: Player[];
+  /** my uid — used to find which row is me */
+  me: string | null;
   onStart: () => void;
+  onReady: (ready: boolean) => void;
+  onLeave: () => void;
   reduced: boolean;
+  /** Real room code from RTDB */
+  code?: string;
+  /** Human-readable room-settings tags built from RoomFilters */
+  roomSettings?: string[];
 };
 
-const ROOM_SETTINGS: { icon?: ReactNode; label: string }[] = [
-  { icon: <MapPinIcon size={13} weight="bold" />, label: "2 กม." },
-  { label: "฿–฿฿" },
-  { label: "อีสาน" },
-  { label: "ญี่ปุ่น" },
-  { label: "เปิดอยู่ตอนนี้" },
+const DEFAULT_SETTINGS = [
+  "📍 2 กม.",
+  "฿–฿฿",
+  "อีสาน",
+  "ญี่ปุ่น",
+  "เปิดอยู่ตอนนี้",
 ];
 
-export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
-  const [count, setCount] = useState(1); // how many have joined (me first)
-  const [ready, setReady] = useState<Record<string, boolean>>({});
-  const [meReady, setMeReady] = useState(false);
+export function LobbyScreen({
+  players,
+  me,
+  onStart,
+  onReady,
+  onLeave,
+  reduced,
+  code: roomCode,
+  roomSettings,
+}: LobbyScreenProps) {
   const [copied, setCopied] = useState(false);
-  const code = "A7F2";
+  const code = roomCode ?? "";
 
-  // simulate friends trickling in
-  useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    timers.push(setTimeout(() => setCount(2), 900));
-    timers.push(setTimeout(() => setCount(3), 2100));
-    timers.push(setTimeout(() => setReady((r) => ({ ...r, p2: true })), 3000));
-    timers.push(setTimeout(() => setCount(4), 3400));
-    timers.push(setTimeout(() => setReady((r) => ({ ...r, p3: true })), 4200));
-    return () => timers.forEach(clearTimeout);
-  }, []);
-
-  const visible = players.slice(0, count);
-  const canStart = count >= 2;
+  const myPlayer = players.find((p) => p.id === me);
+  const isHost = myPlayer?.host ?? false;
+  const meReady = myPlayer?.ready ?? false;
+  const onlineCount = players.filter((p) => p.connected).length;
+  // need at least 2 voters to start a group round (wiki §2.3)
+  const canStart = players.length >= 2;
 
   function share() {
+    const link =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/j/${code}`
+        : code;
+    if (navigator.share) {
+      navigator
+        .share({
+          title: "เข้าห้องกินไรดี",
+          text: `โค้ดห้อง: ${code}`,
+          url: link,
+        })
+        .catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).catch(() => {});
+    }
     setCopied(true);
     buzz(12);
     setTimeout(() => setCopied(false), 1600);
@@ -51,7 +73,30 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
 
   return (
     <Screen bg="var(--cream-2)">
-      <div style={{ flexShrink: 0, padding: "54px 22px 0", textAlign: "center" }}>
+      <button
+        className="rm-tap font-display"
+        onClick={onLeave}
+        style={{
+          position: "absolute",
+          top: 50,
+          left: 16,
+          zIndex: 5,
+          border: "none",
+          background: "rgba(255,255,255,0.8)",
+          color: "var(--ink-3)",
+          fontWeight: 600,
+          fontSize: 13,
+          padding: "7px 13px",
+          borderRadius: 999,
+          cursor: "pointer",
+          boxShadow: "var(--sh-soft)",
+        }}
+      >
+        ← ออก
+      </button>
+      <div
+        style={{ flexShrink: 0, padding: "54px 22px 0", textAlign: "center" }}
+      >
         <div
           style={{
             fontSize: 14,
@@ -153,13 +198,13 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
                 animation: reduced ? "none" : "rmHeartbeat 1.4s infinite",
               }}
             />
-            {count} ออนไลน์
+            {onlineCount} ออนไลน์
           </span>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {visible.map((p) => {
-            const isReady = p.me ? meReady : ready[p.id];
+          {players.map((p) => {
+            const isReady = p.ready;
             return (
               <div
                 key={p.id}
@@ -180,7 +225,11 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
                 <div style={{ flex: 1 }}>
                   <div
                     className="font-display"
-                    style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}
+                    style={{
+                      fontSize: 16,
+                      fontWeight: 600,
+                      color: "var(--ink)",
+                    }}
                   >
                     {p.name}{" "}
                     {p.me && (
@@ -192,17 +241,19 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
                   <div
                     style={{
                       fontSize: 12.5,
-                      color: isReady ? "var(--good)" : "var(--ink-3)",
+                      color: !p.connected
+                        ? "var(--ink-3)"
+                        : isReady
+                          ? "var(--good)"
+                          : "var(--ink-3)",
                       fontWeight: 600,
                     }}
                   >
-                    {isReady ? (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                        <CheckIcon size={13} weight="bold" /> พร้อมแล้ว
-                      </span>
-                    ) : (
-                      "กำลังเลือก…"
-                    )}
+                    {!p.connected
+                      ? "⚪ ออฟไลน์"
+                      : isReady
+                        ? "✓ พร้อมแล้ว"
+                        : "กำลังเลือก…"}
                   </div>
                 </div>
                 {p.host && (
@@ -223,7 +274,7 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
             );
           })}
           {/* waiting ghost slot */}
-          {count < players.length && (
+          {players.length < 2 && (
             <div
               style={{
                 display: "flex",
@@ -300,9 +351,10 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
             </span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            {ROOM_SETTINGS.map(({ icon, label }) => (
+            
+            {(roomSettings ?? DEFAULT_SETTINGS).map((t, i) => (
               <span
-                key={label}
+                key={i}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -316,8 +368,7 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
                   boxShadow: "var(--sh-soft)",
                 }}
               >
-                {icon}
-                {label}
+                {t}
               </span>
             ))}
           </div>
@@ -336,7 +387,7 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
         <button
           className="rm-btn rm-tap font-display"
           onClick={() => {
-            setMeReady((v) => !v);
+            onReady(!meReady);
             buzz(14);
           }}
           style={{
@@ -353,7 +404,14 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
           }}
         >
           {meReady ? (
-            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+              }}
+            >
               <CheckIcon size={18} weight="bold" /> พร้อมแล้ว
             </span>
           ) : (
@@ -361,9 +419,19 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
           )}
         </button>
         <div style={{ flex: 1.3 }}>
-          <PrimaryButton disabled={!canStart} onClick={onStart} ariaLabel="เริ่มเกม">
-            {canStart ? "เริ่มเกม 🚀" : "รออีก " + (2 - count) + " คน"}
-          </PrimaryButton>
+          {isHost ? (
+            <PrimaryButton
+              disabled={!canStart}
+              onClick={onStart}
+              ariaLabel="เริ่มเกม"
+            >
+              {canStart ? "เริ่มเกม 🚀" : `รออีก ${2 - players.length} คน`}
+            </PrimaryButton>
+          ) : (
+            <PrimaryButton disabled ariaLabel="รอโฮสต์เริ่มเกม">
+              {canStart ? "รอโฮสต์เริ่ม…" : `รออีก ${2 - players.length} คน`}
+            </PrimaryButton>
+          )}
         </div>
       </div>
     </Screen>

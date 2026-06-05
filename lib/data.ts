@@ -199,10 +199,10 @@ export const RESTAURANTS: Restaurant[] = [
 
 // Players in the room (current user = me).
 export const PLAYERS: Player[] = [
-  { id: "p_me", name: "คุณ", emoji: "🦊", host: true, me: true, ready: false },
-  { id: "p2", name: "ฟ้า", emoji: "🐰", host: false, me: false, ready: false },
-  { id: "p3", name: "บาส", emoji: "🐻", host: false, me: false, ready: false },
-  { id: "p4", name: "มิ้น", emoji: "🐱", host: false, me: false, ready: false },
+  { id: "p_me", name: "คุณ", emoji: "🦊", host: true, me: true, ready: false, connected: true },
+  { id: "p2", name: "ฟ้า", emoji: "🐰", host: false, me: false, ready: false, connected: true },
+  { id: "p3", name: "บาส", emoji: "🐻", host: false, me: false, ready: false, connected: true },
+  { id: "p4", name: "มิ้น", emoji: "🐱", host: false, me: false, ready: false, connected: true },
 ];
 
 // Cuisine chips used in Create Room.

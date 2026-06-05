@@ -270,3 +270,8 @@ button.rm-btn:focus-visible,
     opacity: 1;
   }
 }
+@keyframes rmSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
