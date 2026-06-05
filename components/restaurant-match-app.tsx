@@ -312,6 +312,7 @@ export function RestaurantMatchApp({
       <DetailScreen
         r={withDetails(picked) ?? picked}
         players={players}
+        matched={false}
         onBack={() => setPicked(null)}
         onAgain={() => handleRestart()}
         onHome={handleLeave}
@@ -335,6 +336,7 @@ export function RestaurantMatchApp({
       <DetailScreen
         r={withDetails(matchedRestaurant) ?? matchedRestaurant}
         players={players}
+        matched
         onBack={() => setDetailOpen(false)}
         onAgain={() => handleRestart()}
         onHome={handleLeave}
