@@ -9,11 +9,25 @@ import { AVATAR_CHOICES } from "@/lib/data";
 
 type JoinScreenProps = {
   onBack: () => void;
-  onJoin: (data: { name: string; avatar: string }) => void;
+  onJoin: (data: { code: string; name: string; avatar: string }) => void;
+  loading?: boolean;
+  error?: string | null;
+  /** prefilled code from an invite link (/j/{code}) */
+  initialCode?: string;
 };
 
-export function JoinScreen({ onBack, onJoin }: JoinScreenProps) {
-  const [code, setCode] = useState("");
+function sanitizeCode(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+}
+
+export function JoinScreen({
+  onBack,
+  onJoin,
+  loading = false,
+  error,
+  initialCode,
+}: JoinScreenProps) {
+  const [code, setCode] = useState(() => sanitizeCode(initialCode ?? ""));
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState("🐰");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -44,12 +58,11 @@ export function JoinScreen({ onBack, onJoin }: JoinScreenProps) {
             <input
               ref={inputRef}
               value={code}
-              inputMode="numeric"
+              inputMode="text"
+              autoCapitalize="characters"
               maxLength={4}
-              aria-label="โค้ดห้อง 4 หลัก"
-              onChange={(e) =>
-                setCode(e.target.value.replace(/\D/g, "").slice(0, 4))
-              }
+              aria-label="โค้ดห้อง 4 ตัว"
+              onChange={(e) => setCode(sanitizeCode(e.target.value))}
               style={{
                 position: "absolute",
                 inset: 0,
@@ -114,8 +127,7 @@ export function JoinScreen({ onBack, onJoin }: JoinScreenProps) {
               marginTop: 10,
             }}
           >
-            ขอโค้ดจากเพื่อนที่สร้างห้อง · ลองพิมพ์{" "}
-            <b style={{ color: "var(--cta)" }}>เลขอะไรก็ได้</b>
+            ขอโค้ด 4 ตัวอักษรจากเพื่อนที่สร้างห้อง
           </p>
         </div>
 
@@ -205,11 +217,24 @@ export function JoinScreen({ onBack, onJoin }: JoinScreenProps) {
           padding: "12px 24px max(20px, env(safe-area-inset-bottom))",
         }}
       >
+        {error && (
+          <p
+            style={{
+              margin: "0 0 10px",
+              fontSize: 13.5,
+              color: "var(--cta)",
+              textAlign: "center",
+              fontWeight: 600,
+            }}
+          >
+            {error}
+          </p>
+        )}
         <PrimaryButton
-          disabled={!ready}
-          onClick={() => onJoin({ name: name.trim(), avatar })}
+          disabled={!ready || loading}
+          onClick={() => onJoin({ code, name: name.trim(), avatar })}
         >
-          เข้าร่วม
+          {loading ? "กำลังเข้าร่วม…" : "เข้าร่วม"}
         </PrimaryButton>
       </div>
     </Screen>

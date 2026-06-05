@@ -235,36 +235,47 @@ function SwipeCard({ r, drag, top, depth, exiting }: SwipeCardProps) {
 }
 
 type SwipeScreenProps = {
+  /** real room code, shown in the header */
+  code: string;
+  /** shared immutable deck — same cards/order for everyone */
   deck: Restaurant[];
   players: Player[];
-  onMatch: (r: Restaurant, liked: Restaurant[]) => void;
-  onNoMatch: (liked: Restaurant[]) => void;
+  /** restaurantId → uids that liked it (realtime) */
+  likes: Record<string, string[]>;
+  /** uid → swipe cursor (realtime) */
+  progress: Record<string, number>;
+  myUid: string;
+  /** resume position — where this player left off */
+  startCursor: number;
   reduced: boolean;
-  /** earliest card index a group match can trigger */
-  matchAt?: number;
+  /** report each decision up so the app writes the like + progress to RTDB */
+  onDecide: (restaurant: Restaurant, liked: boolean, nextCursor: number) => void;
 };
 
 export function SwipeScreen({
+  code,
   deck,
   players,
-  onMatch,
-  onNoMatch,
+  likes,
+  progress,
+  myUid,
+  startCursor,
   reduced,
-  matchAt = 5,
+  onDecide,
 }: SwipeScreenProps) {
-  const [idx, setIdx] = useState(0);
+  const [idx, setIdx] = useState(startCursor);
   const [drag, setDrag] = useState<Drag | null>(null);
   const [exiting, setExiting] = useState<Exiting | null>(null);
-  const [liked, setLiked] = useState<Restaurant[]>([]);
   const startRef = useRef<{ x: number; y: number } | null>(null);
   const busy = useRef(false);
 
   const current = deck[idx];
 
-  // friends' simulated progress (slightly ahead of me)
-  const friendProg = Math.min(deck.length, idx + 2);
-  // teaser: how many friends liked the CURRENT card (deterministic per card)
-  const likeTeaser = current ? (current.id.charCodeAt(1) % 3) + (idx % 2) : 0;
+  // real friend progress: how many other players have already swiped past this card
+  const others = players.filter((p) => p.id !== myUid);
+  const friendsHere = others.filter((p) => (progress[p.id] ?? 0) > idx).length;
+  // real teaser: how many people have liked the CURRENT card so far
+  const likeTeaser = current ? (likes[current.id]?.length ?? 0) : 0;
   const nearEnd = idx >= deck.length - 3;
 
   function decide(dir: number) {
@@ -273,26 +284,16 @@ export function SwipeScreen({
     busy.current = true;
     buzz(dir > 0 ? 18 : 8);
     const isLike = dir > 0;
-    const newLiked = isLike ? [...liked, current] : liked;
+    const next = idx + 1;
     setExiting({ dir });
-    // does THIS like trigger the group match?
-    const triggers = isLike && newLiked.length >= 2 && idx >= matchAt - 1;
+    // Report the vote immediately; the match (if any) arrives via the room
+    // subscription — we never decide a match locally (wiki §2.5/§3.4).
+    onDecide(current, isLike, next);
     setTimeout(
       () => {
         setExiting(null);
         setDrag(null);
-        if (isLike) setLiked(newLiked);
-        if (triggers) {
-          onMatch(current, newLiked);
-          busy.current = false;
-          return;
-        }
-        const next = idx + 1;
-        if (next >= deck.length) {
-          onNoMatch(newLiked.length ? newLiked : [deck[0], deck[4]]);
-        } else {
-          setIdx(next);
-        }
+        setIdx(next);
         busy.current = false;
       },
       reduced ? 140 : 420,
@@ -334,7 +335,7 @@ export function SwipeScreen({
             className="font-display"
             style={{ fontSize: 19, fontWeight: 600, color: "var(--ink)" }}
           >
-            ห้อง <span style={{ color: "var(--cta)" }}>#A7F2</span>
+            ห้อง <span style={{ color: "var(--cta)" }}>#{code}</span>
           </span>
           {/* avatar row of everyone */}
           <div style={{ display: "flex", alignItems: "center" }}>
@@ -379,7 +380,9 @@ export function SwipeScreen({
           }}
         >
           <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
-            เพื่อนปัดถึงใบ {friendProg}/{deck.length}
+            {others.length > 0
+              ? `เพื่อน ${friendsHere}/${others.length} คนปัดผ่านใบนี้แล้ว`
+              : "รอเพื่อนเข้ามาปัด…"}
           </span>
           {likeTeaser >= 2 && (
             <span
@@ -415,20 +418,42 @@ export function SwipeScreen({
             cursor: drag?.active ? "grabbing" : "grab",
           }}
         >
-          {[2, 1, 0].map((d) => {
-            const ci = idx + d;
-            if (ci >= deck.length) return null;
-            return (
-              <SwipeCard
-                key={deck[ci].id}
-                r={deck[ci]}
-                depth={d}
-                top={d === 0}
-                drag={d === 0 ? drag : null}
-                exiting={d === 0 ? exiting : null}
-              />
-            );
-          })}
+          {current ? (
+            [2, 1, 0].map((d) => {
+              const ci = idx + d;
+              if (ci >= deck.length) return null;
+              return (
+                <SwipeCard
+                  key={deck[ci].id}
+                  r={deck[ci]}
+                  depth={d}
+                  top={d === 0}
+                  drag={d === 0 ? drag : null}
+                  exiting={d === 0 ? exiting : null}
+                />
+              );
+            })
+          ) : (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+                textAlign: "center",
+                color: "var(--ink-3)",
+              }}
+            >
+              <span style={{ fontSize: 44 }}>🍽️</span>
+              <span className="font-display" style={{ fontSize: 17, fontWeight: 600, color: "var(--ink-2)" }}>
+                ปัดครบทุกใบแล้ว
+              </span>
+              <span style={{ fontSize: 13.5 }}>กำลังรอเพื่อนปัดให้ครบ…</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -497,47 +522,10 @@ export function SwipeScreen({
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 26,
+          gap: 40,
         }}
       >
         <RoundButton kind="pass" onClick={() => decide(-1)} />
-        <button
-          className="rm-tap"
-          aria-label="ย้อนกลับการ์ดก่อนหน้า"
-          onClick={() => {
-            if (idx > 0 && !busy.current) {
-              setIdx(idx - 1);
-              buzz(8);
-            }
-          }}
-          style={{
-            width: 50,
-            height: 50,
-            borderRadius: "50%",
-            border: "none",
-            background: "rgba(255,255,255,0.9)",
-            boxShadow: "0 6px 14px rgba(43,27,23,0.12)",
-            cursor: "pointer",
-            color: "var(--ink-3)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-          }}
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 8v6h6M3 14a9 9 0 109-9 9 9 0 00-6.4 2.6L3 11" />
-          </svg>
-        </button>
         <RoundButton kind="like" onClick={() => decide(1)} big />
       </div>
     </Screen>

@@ -1,27 +1,73 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BackHeader } from "@/components/ui/back-header";
 import { Chip, PrimaryButton } from "@/components/ui/buttons";
 import { Screen } from "@/components/ui/screen";
 import { CUISINES, priceStr } from "@/lib/data";
+import { mapsConfig } from "@/lib/config/maps";
+import type { RoomFilters } from "@/lib/types";
+
+// Bangkok city center — fallback when geolocation is unavailable
+const BANGKOK = { lat: mapsConfig.defaultCenter.lat, lng: mapsConfig.defaultCenter.lng };
 
 type CreateScreenProps = {
   onBack: () => void;
-  onCreate: () => void;
+  onCreate: (filters: RoomFilters) => void;
+  loading?: boolean;
+  error?: string | null;
 };
 
-export function CreateScreen({ onBack, onCreate }: CreateScreenProps) {
+export function CreateScreen({ onBack, onCreate, loading = false, error }: CreateScreenProps) {
   const [radius, setRadius] = useState(2);
   const [price, setPrice] = useState<number[]>([1, 2]);
   const [cuisines, setCuisines] = useState<string[]>(["อีสาน", "ญี่ปุ่น"]);
   const [openNow, setOpenNow] = useState(true);
   const [loc, setLoc] = useState<"current" | "pin">("current");
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoLabel, setGeoLabel] = useState("กำลังหาตำแหน่ง…");
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  // Request geolocation when "ใช้ตำแหน่งปัจจุบัน" is selected
+  useEffect(() => {
+    if (loc !== "current") return;
+    if (!navigator.geolocation) {
+      setGeoLabel("ไม่รองรับ GPS · ใช้ตำแหน่งกรุงเทพฯ");
+      setCoords(BANGKOK);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoLabel("ตำแหน่งปัจจุบัน ✓");
+        setGeoError(null);
+      },
+      () => {
+        setGeoLabel("ใช้ตำแหน่งกรุงเทพฯ (GPS ล้มเหลว)");
+        setCoords(BANGKOK);
+        setGeoError("ไม่สามารถรับตำแหน่งได้");
+      },
+      { timeout: 10_000, enableHighAccuracy: false },
+    );
+  }, [loc]);
 
   const togglePrice = (n: number) =>
     setPrice((p) => (p.includes(n) ? p.filter((x) => x !== n) : [...p, n]));
   const toggleCuisine = (c: string) =>
     setCuisines((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
+
+  function handleCreate() {
+    const location = coords ?? BANGKOK;
+    onCreate({
+      lat: location.lat,
+      lng: location.lng,
+      radiusKm: radius,
+      priceMin: price.length > 0 ? Math.min(...price) : 1,
+      priceMax: price.length > 0 ? Math.max(...price) : 4,
+      cuisines,
+      openNow,
+    });
+  }
 
   return (
     <Screen bg="var(--cream-2)">
@@ -79,8 +125,8 @@ export function CreateScreen({ onBack, onCreate }: CreateScreenProps) {
               >
                 ใช้ตำแหน่งปัจจุบัน
               </div>
-              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
-                อารีย์ · พญาไท กรุงเทพฯ
+              <div style={{ fontSize: 12.5, color: geoError ? "var(--cta)" : "var(--ink-3)" }}>
+                {loc === "current" ? geoLabel : "GPS · ตำแหน่งอัตโนมัติ"}
               </div>
             </div>
             {loc === "current" && <Check />}
@@ -223,7 +269,22 @@ export function CreateScreen({ onBack, onCreate }: CreateScreenProps) {
           padding: "12px 24px max(20px, env(safe-area-inset-bottom))",
         }}
       >
-        <PrimaryButton onClick={onCreate}>สร้างห้อง 🎉</PrimaryButton>
+        {error && (
+          <p
+            style={{
+              margin: "0 0 10px",
+              fontSize: 13.5,
+              color: "var(--cta)",
+              textAlign: "center",
+              fontWeight: 600,
+            }}
+          >
+            {error}
+          </p>
+        )}
+        <PrimaryButton onClick={handleCreate} disabled={loading}>
+          {loading ? "กำลังสร้างห้อง…" : "สร้างห้อง 🎉"}
+        </PrimaryButton>
       </div>
     </Screen>
   );

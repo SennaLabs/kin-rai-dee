@@ -1,24 +1,34 @@
-// Authentication service — stub for Firebase Auth.
-// Replace each method body once the Firebase SDK is installed (yarn add firebase).
-
+import {
+  onAuthStateChanged,
+  signInAnonymously,
+  type User,
+} from "firebase/auth";
+import { firebaseAuth } from "@/lib/firebase";
 import type { AuthUser } from "@/lib/types";
+
+function mapUser(u: User): AuthUser {
+  return {
+    id: u.uid,
+    anonymous: u.isAnonymous,
+    displayName: u.displayName ?? undefined,
+    photoURL: u.photoURL ?? undefined,
+  };
+}
 
 export const authService = {
   async signInAnonymously(): Promise<AuthUser> {
-    // TODO: const { getAuth, signInAnonymously } = await import("firebase/auth");
-    //       const { user } = await signInAnonymously(getAuth());
-    //       return { id: user.uid, anonymous: true };
-    return { id: `anon_${Date.now()}`, anonymous: true };
+    const { user } = await signInAnonymously(firebaseAuth());
+    return mapUser(user);
   },
 
-  async getCurrentUser(): Promise<AuthUser | null> {
-    // TODO: return getAuth().currentUser mapped to AuthUser, or null
-    return null;
+  getCurrentUser(): AuthUser | null {
+    const user = firebaseAuth().currentUser;
+    return user ? mapUser(user) : null;
   },
 
   onAuthStateChange(callback: (user: AuthUser | null) => void): () => void {
-    // TODO: return onAuthStateChanged(getAuth(), firebaseUser => callback(mapped))
-    callback(null);
-    return () => {};
+    return onAuthStateChanged(firebaseAuth(), (user) => {
+      callback(user ? mapUser(user) : null);
+    });
   },
 };
