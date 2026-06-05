@@ -1,26 +1,270 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+   Restaurant Match — design tokens (ported from the exported design)
+   Plain custom properties so the component inline styles can keep
+   referencing var(--coral) etc. verbatim.
+   ───────────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* warm / appetite palette */
+  --coral: #ff5a3c;
+  --coral-soft: #ff7a5e;
+  --tomato: #ff4d2e;
+  --amber: #ffb627;
+  --amber-bright: #ffc845;
+  --cta: #e63946;
+  --cta-deep: #d7263d;
+
+  --cream: #fff8f3;
+  --cream-2: #fff4ec;
+  --cream-3: #ffeadd;
+
+  --ink: #2b1b17; /* warm charcoal */
+  --ink-2: #6b4a40; /* muted warm */
+  --ink-3: #a98a7e; /* faint warm */
+
+  --line: rgba(43, 27, 23, 0.1);
+  --line-strong: rgba(43, 27, 23, 0.16);
+
+  --good: #1e9e6a; /* match/like — paired ALWAYS with icon + label */
+  --pass: #8a6f66;
+
+  /* radii */
+  --r-sm: 14px;
+  --r-md: 20px;
+  --r-lg: 26px;
+  --r-xl: 32px;
+  --r-pill: 999px;
+
+  /* shadow */
+  --sh-card: 0 10px 30px rgba(43, 27, 23, 0.12), 0 2px 6px rgba(43, 27, 23, 0.06);
+  --sh-soft: 0 6px 18px rgba(43, 27, 23, 0.1);
+  --sh-btn: 0 8px 18px rgba(230, 57, 70, 0.32);
+  --sh-pop: 0 18px 50px rgba(43, 27, 23, 0.22);
 }
 
+/* ─────────────────────────────────────────────────────────────
+   Expose the tokens to Tailwind so utilities like `bg-coral`,
+   `text-ink`, `font-display`, `rounded-pill` are available.
+   `inline` keeps the utility value as a direct var() reference.
+   ───────────────────────────────────────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-tomato: var(--tomato);
+  --color-amber: var(--amber);
+  --color-amber-bright: var(--amber-bright);
+  --color-cta: var(--cta);
+  --color-cta-deep: var(--cta-deep);
+
+  --color-cream: var(--cream);
+  --color-cream-2: var(--cream-2);
+  --color-cream-3: var(--cream-3);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+
+  --color-good: var(--good);
+  --color-pass: var(--pass);
+
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-pill: var(--r-pill);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/*
+ * Fonts live in a regular (non-inline) @theme so Tailwind emits the
+ * `--font-display` / `--font-body` variables on :root — the component inline
+ * styles reference `var(--font-display)` directly, and the `font-display` /
+ * `font-body` utilities are generated too. Wired to next/font (app/layout.tsx).
+ */
+@theme {
+  --font-display: var(--font-mitr), "Mitr", sans-serif;
+  --font-body: var(--font-sarabun), "Sarabun", sans-serif;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* warm food-themed backdrop the device floats on */
+body {
+  min-height: 100vh;
+  background-color: #2b1b17;
+  background-image:
+    radial-gradient(circle at 20% 18%, rgba(255, 90, 60, 0.22), transparent 42%),
+    radial-gradient(circle at 82% 12%, rgba(255, 182, 39, 0.2), transparent 40%),
+    radial-gradient(circle at 50% 92%, rgba(255, 77, 46, 0.18), transparent 46%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+}
+
+/* faint food-pattern wash behind the device */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.05' stroke-width='2'%3E%3Ccircle cx='30' cy='30' r='13'/%3E%3Cpath d='M85 18v24M80 18v10a5 5 0 0010 0V18'/%3E%3Cpath d='M30 78c0-8 6-14 14-14s14 6 14 14z'/%3E%3Ccircle cx='90' cy='88' r='12'/%3E%3C/g%3E%3C/svg%3E");
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* keyboard-only focus ring (a11y) */
+.rm-focusable:focus-visible,
+button.rm-btn:focus-visible,
+.rm-tap:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* striped image placeholder (map preview, etc.) */
+.rm-ph {
+  background-color: var(--cream-3);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(43, 27, 23, 0.05) 0 10px,
+    rgba(43, 27, 23, 0.02) 10px 20px
+  );
+  position: relative;
+  overflow: hidden;
+}
+.rm-ph .rm-ph-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* reduced motion: collapse all keyframe animation to a gentle fade */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 120ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── keyframes ─────────────────────────────── */
+@keyframes rmPop {
+  0% {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes rmDropIn {
+  0% {
+    transform: translateY(28px) scale(0.96);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes rmRise {
+  0% {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes rmBounceIn {
+  0% {
+    transform: scale(0.4) rotate(-6deg);
+    opacity: 0;
+  }
+  55% {
+    transform: scale(1.12) rotate(2deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+@keyframes rmPulseRing {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+@keyframes rmHeartbeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  18% {
+    transform: scale(1.14);
+  }
+  32% {
+    transform: scale(1);
+  }
+  46% {
+    transform: scale(1.09);
+  }
+}
+@keyframes rmFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(3deg);
+  }
+}
+@keyframes rmScreenIn {
+  0% {
+    transform: translateX(22px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes rmFadeOnly {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
 }

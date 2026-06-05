@@ -1,0 +1,141 @@
+/* Restaurant Match — design tokens */
+:root {
+  /* warm / appetite palette */
+  --coral:        #FF5A3C;
+  --coral-soft:   #FF7A5E;
+  --tomato:       #FF4D2E;
+  --amber:        #FFB627;
+  --amber-bright: #FFC845;
+  --cta:          #E63946;
+  --cta-deep:     #D7263D;
+
+  --cream:        #FFF8F3;
+  --cream-2:      #FFF4EC;
+  --cream-3:      #FFEADD;
+
+  --ink:          #2B1B17;  /* warm charcoal */
+  --ink-2:        #6B4A40;  /* muted warm */
+  --ink-3:        #A98A7E;  /* faint warm */
+
+  --line:         rgba(43,27,23,0.10);
+  --line-strong:  rgba(43,27,23,0.16);
+
+  --good:         #1E9E6A; /* match/like — paired ALWAYS with icon + label */
+  --pass:         #8A6F66;
+
+  /* radii */
+  --r-sm: 14px;
+  --r-md: 20px;
+  --r-lg: 26px;
+  --r-xl: 32px;
+  --r-pill: 999px;
+
+  /* shadow */
+  --sh-card: 0 10px 30px rgba(43,27,23,0.12), 0 2px 6px rgba(43,27,23,0.06);
+  --sh-soft: 0 6px 18px rgba(43,27,23,0.10);
+  --sh-btn:  0 8px 18px rgba(230,57,70,0.32);
+  --sh-pop:  0 18px 50px rgba(43,27,23,0.22);
+
+  /* fonts */
+  --font-display: 'Mitr', sans-serif;
+  --font-body: 'Sarabun', sans-serif;
+}
+
+* { -webkit-tap-highlight-color: transparent; }
+
+.font-display { font-family: var(--font-display); }
+.font-body { font-family: var(--font-body); }
+
+/* keyboard-only focus ring (a11y) */
+.rm-focusable:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+button.rm-btn:focus-visible,
+.rm-tap:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* reduced motion: collapse all keyframe animation to a gentle fade */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 120ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── keyframes ─────────────────────────────── */
+@keyframes rmPop {
+  0% { transform: scale(0.2); opacity: 0; }
+  60% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes rmDropIn {
+  0% { transform: translateY(28px) scale(.96); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes rmRise {
+  0% { transform: translateY(40px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+@keyframes rmBounceIn {
+  0% { transform: scale(0.4) rotate(-6deg); opacity: 0; }
+  55% { transform: scale(1.12) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes rmPulseRing {
+  0% { transform: scale(.7); opacity: .55; }
+  100% { transform: scale(2.1); opacity: 0; }
+}
+@keyframes rmHeartbeat {
+  0%, 100% { transform: scale(1); }
+  18% { transform: scale(1.14); }
+  32% { transform: scale(1); }
+  46% { transform: scale(1.09); }
+}
+@keyframes rmFloat {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-10px) rotate(3deg); }
+}
+@keyframes rmShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes rmCountPop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.5); color: var(--cta); }
+  100% { transform: scale(1); }
+}
+@keyframes rmSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes rmScreenIn {
+  0% { transform: translateX(22px); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+@keyframes rmFadeOnly {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* striped image placeholder */
+.rm-ph {
+  background-color: var(--cream-3);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(43,27,23,0.05) 0 10px,
+    rgba(43,27,23,0.02) 10px 20px
+  );
+  position: relative;
+  overflow: hidden;
+}
+.rm-ph .rm-ph-label {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase;
+  color: var(--ink-3); white-space: nowrap;
+}
