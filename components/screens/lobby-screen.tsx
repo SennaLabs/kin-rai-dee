@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { CheckIcon, MapPinIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { buzz } from "@/components/ui/motion";
@@ -13,7 +14,13 @@ type LobbyScreenProps = {
   reduced: boolean;
 };
 
-const ROOM_SETTINGS = ["📍 2 กม.", "฿–฿฿", "อีสาน", "ญี่ปุ่น", "เปิดอยู่ตอนนี้"];
+const ROOM_SETTINGS: { icon?: ReactNode; label: string }[] = [
+  { icon: <MapPinIcon size={13} weight="bold" />, label: "2 กม." },
+  { label: "฿–฿฿" },
+  { label: "อีสาน" },
+  { label: "ญี่ปุ่น" },
+  { label: "เปิดอยู่ตอนนี้" },
+];
 
 export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
   const [count, setCount] = useState(1); // how many have joined (me first)
@@ -88,7 +95,9 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
           }}
         >
           {copied ? (
-            <>✓ คัดลอกลิงก์แล้ว</>
+            <>
+              <CheckIcon size={16} weight="bold" /> คัดลอกลิงก์แล้ว
+            </>
           ) : (
             <>
               <svg
@@ -187,7 +196,13 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
                       fontWeight: 600,
                     }}
                   >
-                    {isReady ? "✓ พร้อมแล้ว" : "กำลังเลือก…"}
+                    {isReady ? (
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                        <CheckIcon size={13} weight="bold" /> พร้อมแล้ว
+                      </span>
+                    ) : (
+                      "กำลังเลือก…"
+                    )}
                   </div>
                 </div>
                 {p.host && (
@@ -272,16 +287,26 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
               ตั้งค่าห้อง
             </span>
             <span
-              style={{ fontSize: 12, color: "var(--cta)", fontWeight: 600 }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                fontSize: 12,
+                color: "var(--cta)",
+                fontWeight: 600,
+              }}
             >
-              โฮสต์แก้ได้ ✎
+              โฮสต์แก้ได้ <PencilSimpleIcon size={12} weight="bold" />
             </span>
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            {ROOM_SETTINGS.map((t) => (
+            {ROOM_SETTINGS.map(({ icon, label }) => (
               <span
-                key={t}
+                key={label}
                 style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
                   fontSize: 12.5,
                   fontWeight: 600,
                   color: "var(--ink-2)",
@@ -291,7 +316,8 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
                   boxShadow: "var(--sh-soft)",
                 }}
               >
-                {t}
+                {icon}
+                {label}
               </span>
             ))}
           </div>
@@ -326,7 +352,13 @@ export function LobbyScreen({ players, onStart, reduced }: LobbyScreenProps) {
             transition: "all .15s",
           }}
         >
-          {meReady ? "✓ พร้อมแล้ว" : "พร้อม"}
+          {meReady ? (
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <CheckIcon size={18} weight="bold" /> พร้อมแล้ว
+            </span>
+          ) : (
+            "พร้อม"
+          )}
         </button>
         <div style={{ flex: 1.3 }}>
           <PrimaryButton disabled={!canStart} onClick={onStart} ariaLabel="เริ่มเกม">
