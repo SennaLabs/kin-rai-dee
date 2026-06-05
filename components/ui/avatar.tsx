@@ -1,4 +1,7 @@
+import { avatars } from "@/assets/avatars";
 import type { Player } from "@/lib/types";
+
+const avatarById = new Map(avatars.map((a) => [String(a.id), a.Component]));
 
 type AvatarProps = {
   p: Player;
@@ -15,6 +18,7 @@ type AvatarProps = {
 
 /** Player avatar bubble with online-presence dot. */
 export function Avatar({ p, size = 40, dim, ring, check, joinPop }: AvatarProps) {
+  const AvatarSvg = avatarById.get(p.emoji);
   return (
     <div
       style={{
@@ -30,6 +34,7 @@ export function Avatar({ p, size = 40, dim, ring, check, joinPop }: AvatarProps)
           width: size,
           height: size,
           borderRadius: "50%",
+          overflow: "hidden",
           background: p.me
             ? "linear-gradient(150deg,#FFE0B2,#FFC845)"
             : "#fff",
@@ -45,7 +50,11 @@ export function Avatar({ p, size = 40, dim, ring, check, joinPop }: AvatarProps)
           transition: "opacity .3s",
         }}
       >
-        {p.emoji}
+        {AvatarSvg ? (
+          <AvatarSvg width={size} height={size} style={{ display: "block" }} />
+        ) : (
+          p.emoji
+        )}
       </div>
       {/* presence dot */}
       <span

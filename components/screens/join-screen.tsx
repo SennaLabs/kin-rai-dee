@@ -5,7 +5,7 @@ import { BackHeader } from "@/components/ui/back-header";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { buzz } from "@/components/ui/motion";
 import { Screen } from "@/components/ui/screen";
-import { AVATAR_CHOICES } from "@/lib/data";
+import { avatars } from "@/assets/avatars";
 
 type JoinScreenProps = {
   onBack: () => void;
@@ -29,7 +29,7 @@ export function JoinScreen({
 }: JoinScreenProps) {
   const [code, setCode] = useState(() => sanitizeCode(initialCode ?? ""));
   const [name, setName] = useState("");
-  const [avatar, setAvatar] = useState("🐰");
+  const [avatar, setAvatar] = useState(() => String(avatars[0].id));
   const inputRef = useRef<HTMLInputElement>(null);
   const ready = code.length === 4 && name.trim().length > 0;
 
@@ -172,41 +172,49 @@ export function JoinScreen({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(6, 1fr)",
+              gridTemplateColumns: "repeat(4, 1fr)",
               gap: 10,
               marginTop: 10,
             }}
           >
-            {AVATAR_CHOICES.map((a) => (
-              <button
-                key={a}
-                className="rm-tap"
-                aria-label={`เลือก avatar ${a}`}
-                aria-pressed={avatar === a}
-                onClick={() => {
-                  setAvatar(a);
-                  buzz(8);
-                }}
-                style={{
-                  aspectRatio: "1",
-                  borderRadius: 14,
-                  cursor: "pointer",
-                  fontSize: 24,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border:
-                    avatar === a
+            {avatars.map(({ id, Component, label }) => {
+              const value = String(id);
+              const selected = avatar === value;
+              return (
+                <button
+                  key={id}
+                  className="rm-tap"
+                  aria-label={`เลือก avatar ${label}`}
+                  aria-pressed={selected}
+                  onClick={() => {
+                    setAvatar(value);
+                    buzz(8);
+                  }}
+                  style={{
+                    aspectRatio: "1",
+                    borderRadius: 14,
+                    cursor: "pointer",
+                    overflow: "hidden",
+                    padding: 4,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: selected
                       ? "2.5px solid var(--coral)"
                       : "2px solid var(--line)",
-                  background: avatar === a ? "rgba(255,90,60,0.1)" : "#fff",
-                  transform: avatar === a ? "scale(1.05)" : "scale(1)",
-                  transition: "all .15s",
-                }}
-              >
-                {a}
-              </button>
-            ))}
+                    background: selected ? "rgba(255,90,60,0.1)" : "#fff",
+                    transform: selected ? "scale(1.05)" : "scale(1)",
+                    transition: "all .15s",
+                  }}
+                >
+                  <Component
+                    width="100%"
+                    height="100%"
+                    style={{ display: "block" }}
+                  />
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

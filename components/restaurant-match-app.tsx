@@ -183,7 +183,7 @@ export function RestaurantMatchApp({
       const hostPlayer: Player = {
         id: userId,
         name: "คุณ",
-        emoji: "🦊",
+        emoji: "1",
         host: true,
         me: true,
         ready: false,
