@@ -1,11 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-64 -68 128 152">
-  <ellipse cx="0" cy="10" rx="46" ry="46" fill="#6B4A2A" stroke="#2B1B17" stroke-width="3.5"/>
-  <circle cx="0" cy="4" r="40" fill="#F4CBA6" stroke="#2B1B17" stroke-width="3.5"/>
-  <path d="M -40 -4 A 40 40 0 0 1 40 -4 L 36 -14 Q 0 -26 -36 -14 Z" fill="#6B4A2A" stroke="#2B1B17" stroke-width="3"/>
-  <circle cx="-15" cy="8" r="10" fill="none" stroke="#E63946" stroke-width="3.2"/>
-  <circle cx="15" cy="8" r="10" fill="none" stroke="#E63946" stroke-width="3.2"/>
-  <line x1="-5" y1="8" x2="5" y2="8" stroke="#E63946" stroke-width="3.2"/>
-  <circle cx="-15" cy="8" r="3.4" fill="#2B1B17"/>
-  <circle cx="15" cy="8" r="3.4" fill="#2B1B17"/>
-  <path d="M -7 23 Q 0 29 7 23" stroke="#2B1B17" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M -44 8 Q -47 -42 0 -44 Q 47 -42 44 8 Q 45 32 38 44 Q 31 18 30 -4 Q 16 -26 0 -27 Q -16 -26 -30 -4 Q -31 18 -38 44 Q -45 32 -44 8 Z" fill="#2B1B17" stroke="#2B1B17" stroke-width="3"/>
+  <path d="M 0 -34 C 27 -34 40 -16 40 4 C 40 24 26 40 0 50 C -26 40 -40 24 -40 4 C -40 -16 -27 -34 0 -34 Z" fill="#E8B488" stroke="#2B1B17" stroke-width="3.5"/>
+  <path d="M -40 0 Q -42 -34 0 -36 Q 42 -34 40 0 L 34 -10 Q 0 -26 -34 -10 Z" fill="#2B1B17"/>
+  <path d="M -25 -7 Q -16 -12 -8 -8" stroke="#2B1B17" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 25 -7 Q 16 -12 8 -8" stroke="#2B1B17" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <circle cx="-15" cy="6" r="10" fill="none" stroke="#E63946" stroke-width="3.2"/>
+  <circle cx="15" cy="6" r="10" fill="none" stroke="#E63946" stroke-width="3.2"/>
+  <line x1="-5" y1="6" x2="5" y2="6" stroke="#E63946" stroke-width="3.2"/>
+  <path d="M -20 6 Q -15 2 -10 5 Q -15 8 -20 6 Z" fill="#2B1B17"/>
+  <path d="M 20 6 Q 15 2 10 5 Q 15 8 20 6 Z" fill="#2B1B17"/>
+  <path d="M -2 14 Q -5 19 1 19" stroke="#2B1B17" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.4"/>
+  <path d="M -9 26 Q -1 29 10 24 Q 1 30 -9 26 Z" fill="#C0392B" stroke="#2B1B17" stroke-width="2"/>
 </svg>

@@ -1,8 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-64 -68 128 152">
-  <circle cx="0" cy="6" r="44" fill="#D9A06B" stroke="#2B1B17" stroke-width="3.5"/>
-  <path d="M -42 -6 A 44 44 0 0 1 42 -6 L 36 -18 Q 10 -30 -10 -24 Q -30 -20 -42 -6 Z" fill="#2B1B17"/>
-  <circle cx="-15" cy="8" r="4.2" fill="#2B1B17"/>
-  <circle cx="15" cy="8" r="4.2" fill="#2B1B17"/>
-  <path d="M -9 22 Q 0 28 9 22" stroke="#2B1B17" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <path d="M 26 40 l 3 -6 l 3 6 l 6 1 l -5 4 l 2 6 l -6 -3 l -6 3 l 2 -6 l -5 -4 z" fill="#FF5A3C" stroke="#2B1B17" stroke-width="1.5"/>
+  <circle cx="0" cy="6" r="44" fill="#C28A52" stroke="#2B1B17" stroke-width="3.5"/>
+  <path d="M -42 -6 A 44 44 0 0 1 42 -6 L 38 -18 Q 0 -30 -38 -18 Z" fill="#2B1B17"/>
+  <path d="M -30 -18 Q -10 -26 8 -22" stroke="#5A3A22" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M -24 -22 Q -4 -28 14 -22" stroke="#5A3A22" stroke-width="2" fill="none" opacity="0.6"/>
+  <path d="M -42 -6 Q -44 6 -40 16 Q -34 4 -34 -8 Z" fill="#2B1B17" opacity="0.25"/>
+  <path d="M 42 -6 Q 44 6 40 16 Q 34 4 34 -8 Z" fill="#2B1B17" opacity="0.25"/>
+  <path d="M -25 -2 Q -16 -5 -7 -2" stroke="#2B1B17" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  <path d="M 25 -2 Q 16 -5 7 -2" stroke="#2B1B17" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+  <path d="M -21 4 Q -15 1 -9 4" stroke="#2B1B17" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M 21 4 Q 15 1 9 4" stroke="#2B1B17" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="-15" cy="8.5" rx="3.4" ry="4" fill="#2B1B17"/>
+  <ellipse cx="15" cy="8.5" rx="3.4" ry="4" fill="#2B1B17"/>
+  <path d="M -2 14 Q -5 19 2 19" stroke="#2B1B17" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M -8 25 Q 0 27.5 8 25" stroke="#2B1B17" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M 24 44 l 3 -6 l 3 6 l 6 1 l -5 4 l 2 6 l -6 -3 l -6 3 l 2 -6 l -5 -4 z" fill="#FF5A3C" stroke="#2B1B17" stroke-width="1.5"/>
 </svg>

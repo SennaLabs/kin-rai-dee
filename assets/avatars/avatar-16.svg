@@ -1,8 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-64 -68 128 152">
-  <circle cx="0" cy="6" r="44" fill="#F4CBA6" stroke="#2B1B17" stroke-width="3.5"/>
-  <path d="M -40 -4 A 44 44 0 0 1 40 -4 L 34 -16 Q 0 -28 -34 -16 Z" fill="#E8C25A" stroke="#2B1B17" stroke-width="3"/>
-  <path d="M -36 6 Q -40 56 0 58 Q 40 56 36 6 Q 20 30 0 30 Q -20 30 -36 6 Z" fill="#E8C25A" stroke="#2B1B17" stroke-width="3"/>
-  <circle cx="-15" cy="4" r="4.2" fill="#2B1B17"/>
-  <circle cx="15" cy="4" r="4.2" fill="#2B1B17"/>
-  <path d="M -7 16 Q 0 21 7 16" stroke="#2B1B17" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  <circle cx="0" cy="-48" r="10" fill="#3A2A1E" stroke="#2B1B17" stroke-width="3"/>
+  <circle cx="0" cy="6" r="44" fill="#F2C29A" stroke="#2B1B17" stroke-width="3.5"/>
+  <path d="M -40 -4 A 44 44 0 0 1 40 -4 L 34 -16 Q 0 -28 -34 -16 Z" fill="#3A2A1E" stroke="#2B1B17" stroke-width="3"/>
+  <path d="M -34 14 Q -34 44 0 46 Q 34 44 34 14 Q 26 34 0 36 Q -26 34 -34 14 Z" fill="#3A2A1E" stroke="#2B1B17" stroke-width="2.8"/>
+  <path d="M -23 -3 Q -15 -7 -7 -4" stroke="#2B1B17" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M 23 -3 Q 15 -7 7 -4" stroke="#2B1B17" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M -21 2 Q -15 -1 -9 2" stroke="#2B1B17" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <path d="M 21 2 Q 15 -1 9 2" stroke="#2B1B17" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <ellipse cx="-15" cy="6.5" rx="3.4" ry="4" fill="#2B1B17"/>
+  <ellipse cx="15" cy="6.5" rx="3.4" ry="4" fill="#2B1B17"/>
+  <path d="M -2 12 Q -5 16 1 16" stroke="#2B1B17" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.45"/>
+  <path d="M -8 22 Q 0 26 8 22" stroke="#2B1B17" stroke-width="2.6" fill="none" stroke-linecap="round"/>
 </svg>

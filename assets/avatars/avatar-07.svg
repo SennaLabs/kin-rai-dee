@@ -1,9 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="-64 -68 128 152">
-  <circle cx="0" cy="-48" r="10" fill="#2B1B17" stroke="#2B1B17" stroke-width="3"/>
-  <circle cx="0" cy="6" r="44" fill="#D9A06B" stroke="#2B1B17" stroke-width="3.5"/>
-  <path d="M -40 -4 A 44 44 0 0 1 40 -4 L 34 -16 Q 0 -28 -34 -16 Z" fill="#2B1B17"/>
-  <path d="M -34 16 Q 0 50 34 16 Q 28 40 0 42 Q -28 40 -34 16 Z" fill="#3A2A1E" opacity="0.85" stroke="#2B1B17" stroke-width="2.5"/>
-  <circle cx="-15" cy="8" r="4.2" fill="#2B1B17"/>
-  <circle cx="15" cy="8" r="4.2" fill="#2B1B17"/>
-  <path d="M -7 20 Q 0 24 7 20" stroke="#2B1B17" stroke-width="2.8" fill="none" stroke-linecap="round"/>
+  <circle cx="0" cy="-46" r="9" fill="#2B1B17" stroke="#2B1B17" stroke-width="3"/>
+  <path d="M 0 -38 C 29 -38 42 -20 42 2 C 42 22 33 38 18 46 Q 0 51 -18 46 C -33 38 -42 22 -42 2 C -42 -20 -29 -38 0 -38 Z" fill="#C28A52" stroke="#2B1B17" stroke-width="3.5"/>
+  <path d="M -40 -6 Q -42 -34 0 -36 Q 42 -34 40 -6 L 34 -16 Q 0 -28 -34 -16 Z" fill="#2B1B17"/>
+  <path d="M -41 -2 Q -45 28 -26 46 Q 0 58 26 46 Q 45 28 41 -2 Q 34 20 28 22 Q 26 40 0 46 Q -26 40 -28 22 Q -34 20 -41 -2 Z" fill="#3A2A1E" stroke="#2B1B17" stroke-width="3"/>
+  <path d="M -15 19 Q 0 23 15 19 Q 7 27 0 26 Q -7 27 -15 19 Z" fill="#3A2A1E"/>
+  <circle cx="-43" cy="10" r="5" fill="none" stroke="#FFB627" stroke-width="3"/>
+  <path d="M -23 -2 Q -15 -6 -7 -3" stroke="#2B1B17" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+  <path d="M 23 -2 Q 15 -6 7 -3" stroke="#2B1B17" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+  <path d="M -22 8 Q -15 5 -8 8 Q -15 11 -22 8 Z" fill="#2B1B17"/>
+  <path d="M 22 8 Q 15 5 8 8 Q 15 11 22 8 Z" fill="#2B1B17"/>
+  <path d="M -2 12 Q -5 17 1 17" stroke="#2B1B17" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.45"/>
+  <path d="M -8 27 Q 0 31 8 27" stroke="#2B1B17" stroke-width="2.6" fill="none" stroke-linecap="round"/>
 </svg>
