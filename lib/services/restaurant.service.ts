@@ -214,20 +214,7 @@ export const restaurantService = {
       );
     } catch (err) {
       console.warn("[restaurantService] Places API failed, using mock data:", err);
-      // Development fallback: filter mock RESTAURANTS by the supplied criteria
-      const selectedLabels = types.map(foodTypeLabel);
-      results = RESTAURANTS.filter((r) => {
-        if (filters.openNow && !r.open) return false;
-        if (r.price < filters.priceMin || r.price > filters.priceMax) return false;
-        if (
-          types.length > 0 &&
-          !types.includes("restaurant") &&
-          !selectedLabels.includes(r.cuisine) &&
-          !r.tags.some((t) => selectedLabels.includes(t))
-        )
-          return false;
-        return r.dist <= filters.radiusKm;
-      });
+      results = mockDeck(filters);
     }
 
     // Apply open-now, price and cuisine filters to the results (the New Nearby
@@ -304,12 +291,38 @@ export const restaurantService = {
       if (relaxed.length > results.length) results = relaxed;
     }
 
-    // When even widening + relaxing yields nothing, getNearby's own catch has
-    // already substituted mock restaurants (offline / remote area), so the room
-    // is never unplayable. Mock is never blended into a real deck here.
+    // A genuine ZERO_RESULTS (real but restaurant-less area) succeeds upstream so
+    // it never hits getNearby's catch — widening/relaxing can still leave us
+    // empty. Fall back to mock here too so a room always has a playable deck
+    // (wiki §2.7 #9). Mock is never blended into a real deck.
+    if (results.length === 0) {
+      results = mockDeck({ ...filters, radiusKm });
+    }
     return shuffle(results).slice(0, size);
   },
 };
+
+/**
+ * Mock restaurants matching the room filters — the offline / no-real-results
+ * fallback so a room is never left without a deck (wiki §2.7 #9). Used both when
+ * the Places API throws and when it genuinely returns nothing for the area.
+ */
+function mockDeck(filters: RoomFilters): Restaurant[] {
+  const types = selectedFoodTypes(filters);
+  const selectedLabels = types.map(foodTypeLabel);
+  return RESTAURANTS.filter((r) => {
+    if (filters.openNow && !r.open) return false;
+    if (r.price < filters.priceMin || r.price > filters.priceMax) return false;
+    if (
+      types.length > 0 &&
+      !types.includes("restaurant") &&
+      !selectedLabels.includes(r.cuisine) &&
+      !r.tags.some((t) => selectedLabels.includes(t))
+    )
+      return false;
+    return r.dist <= filters.radiusKm;
+  });
+}
 
 // Fisher–Yates shuffle (non-mutating).
 function shuffle<T>(items: T[]): T[] {

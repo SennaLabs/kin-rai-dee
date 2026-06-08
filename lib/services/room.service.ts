@@ -37,6 +37,8 @@ const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // base32, no confusing c
 const CODE_LEN = 4;
 const MAX_CODE_TRIES = 12;
 const DISCONNECT_GRACE_MS = 20_000; // wiki §2.7 #1 — wait out connection flaps before dropping a voter
+const MAX_TIE_ROUNDS = 2; // wiki §2.5 — after this many tied rounds, break the deadlock deterministically
+const IDLE_TIMEOUT_MS = 90_000; // a connected voter who hasn't swiped this long stops blocking the round
 
 // ── raw RTDB shapes ─────────────────────────────────────────────────────────
 
@@ -67,6 +69,7 @@ type RawRoom = {
   likes?: Record<string, Record<string, number>>;
   dislikes?: Record<string, Record<string, number>>;
   progress?: Record<string, number>;
+  activity?: Record<string, number>;
   results?: {
     computedAt?: number;
     noMatch?: boolean;
@@ -115,6 +118,18 @@ function asNumber(value: unknown, fallback: number): number {
 function boolMap(uids: string[]): Record<string, boolean> {
   return uids.reduce<Record<string, boolean>>((acc, uid) => {
     acc[uid] = true;
+    return acc;
+  }, {});
+}
+
+/**
+ * serverTimestamp() per voter — the start-of-round idle baseline, so a voter who
+ * never swipes still goes idle relative to game start (not never, which has no
+ * activity record to measure).
+ */
+function activityBaseline(uids: string[]): Record<string, object> {
+  return uids.reduce<Record<string, object>>((acc, uid) => {
+    acc[uid] = serverTimestamp();
     return acc;
   }, {});
 }
@@ -201,18 +216,52 @@ function requiredVoters(state: GameState): string[] {
 }
 
 /**
- * Deck round is finishable once every voter has either swiped the whole deck or
- * dropped out. Unlike allVotersFinished (full roster, the no-disconnect fast
- * path) this excludes disconnected stragglers so the round can't hang forever.
+ * A voter who's stayed connected but hasn't swiped for IDLE_TIMEOUT_MS — treated
+ * like a dropout so one AFK tab can't hang the room. Their earlier likes still
+ * count. Requires a baseline (set at game start), so a voter with no recorded
+ * activity is never wrongly judged idle.
+ */
+function isIdle(state: GameState, uid: string, now: number): boolean {
+  const last = state.activity[uid];
+  return typeof last === "number" && now - last > IDLE_TIMEOUT_MS;
+}
+
+/**
+ * Deck round is finishable once every voter has either swiped the whole deck,
+ * dropped out, or gone idle. Unlike allVotersFinished (full roster, the
+ * no-disconnect fast path) this excludes stragglers so the round can't hang.
  */
 function deckRoundComplete(state: GameState): boolean {
   const voters = votersFromState(state);
   if (state.room.deckSize <= 0 || voters.length === 0) return false;
   const players = new Map(state.room.players.map((p) => [p.id, p]));
+  const now = Date.now();
   return voters.every((uid) => {
     const finished = (state.progress[uid] ?? 0) >= state.room.deckSize;
-    return finished || !(players.get(uid)?.connected ?? false);
+    const connected = players.get(uid)?.connected ?? false;
+    return finished || !connected || isIdle(state, uid, now);
   });
+}
+
+/**
+ * Earliest wall-clock time a still-blocking voter will cross the idle threshold,
+ * or null if none will. Lets the subscription wake itself exactly when an idle
+ * voter would unblock the round — onValue never fires on the passage of time.
+ */
+function nextIdleDeadline(state: GameState): number | null {
+  const voters = votersFromState(state);
+  const players = new Map(state.room.players.map((p) => [p.id, p]));
+  let earliest: number | null = null;
+  for (const uid of voters) {
+    const finished = (state.progress[uid] ?? 0) >= state.room.deckSize;
+    const connected = players.get(uid)?.connected ?? false;
+    if (finished || !connected) continue;
+    const last = state.activity[uid];
+    if (typeof last !== "number") continue;
+    const deadline = last + IDLE_TIMEOUT_MS;
+    if (earliest === null || deadline < earliest) earliest = deadline;
+  }
+  return earliest;
 }
 
 /** Tie-break round is resolvable once every still-connected voter has voted. */
@@ -237,6 +286,26 @@ function finalVoteWinners(
   }
   const max = Math.max(...counts.values());
   return finalVote.options.filter((id) => (counts.get(id) ?? 0) === max);
+}
+
+/** FNV-1a — small stable hash so every client breaks a tie identically. */
+function hashString(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/**
+ * Deterministic last-resort tie-break: pick one id from a deadlocked round.
+ * Seeded by code+round over a sorted list, so every client observing the same
+ * round resolves to the same winner (no Math.random divergence across clients).
+ */
+function pickTieBreak(ids: string[], code: string, round: number): string {
+  const sorted = [...ids].sort();
+  return sorted[hashString(`${code}:${round}`) % sorted.length];
 }
 
 function db() {
@@ -287,6 +356,7 @@ function toGameState(code: string, raw: RawRoom, myUid: string): GameState {
     likes,
     dislikes,
     progress: raw.progress ?? {},
+    activity: raw.activity ?? {},
     results: raw.results?.ranking ?? [],
     finalVote: raw.finalVote
       ? {
@@ -433,6 +503,7 @@ export const roomService = {
       likes: null,
       dislikes: null,
       progress: null,
+      activity: activityBaseline(roster),
       results: null,
       finalVote: null,
       match: null,
@@ -451,6 +522,7 @@ export const roomService = {
     await update(ref(db(), `rooms/${code}`), {
       [`${decisionPath}/${restaurantId}/${uid}`]: serverTimestamp(),
       [`progress/${uid}`]: cursor,
+      [`activity/${uid}`]: serverTimestamp(),
     });
   },
 
@@ -535,7 +607,6 @@ export const roomService = {
     // but only wait on still-connected voters to have voted (wiki §2.7 #1).
     const voters = votersFromState(state);
     const required = requiredVoters(state);
-    const winners = finalVoteWinners(state.finalVote, voters);
 
     const result = await runTransaction(ref(db(), `rooms/${code}/finalVote`), (current) => {
       if (!current || current.round !== state.finalVote?.round) return;
@@ -549,11 +620,14 @@ export const roomService = {
       if (!required.every((uid) => currentRound.options.includes(votes[uid]))) return;
 
       const roundWinners = finalVoteWinners(currentRound, voters);
-      if (roundWinners.length === 1) {
-        return {
-          ...current,
-          resolved: { winnerId: roundWinners[0], at: Date.now() },
-        };
+      // One winner, or a tie that has dragged on too long — break it
+      // deterministically so the round can't recur forever (wiki §2.5).
+      if (roundWinners.length === 1 || currentRound.round >= MAX_TIE_ROUNDS) {
+        const winnerId =
+          roundWinners.length === 1
+            ? roundWinners[0]
+            : pickTieBreak(roundWinners, code, currentRound.round);
+        return { ...current, resolved: { winnerId, at: Date.now() } };
       }
 
       return {
@@ -564,8 +638,13 @@ export const roomService = {
       };
     });
 
-    if (!result.committed || winners.length !== 1) return;
-    await this.declareWinner(code, winners[0], state.likes[winners[0]] ?? []);
+    // Declare from the id the transaction actually settled on — not a pre-read
+    // tally — so a deterministic tie-break still produces the match.
+    if (!result.committed) return;
+    const winnerId = result.snapshot.child("resolved/winnerId").val();
+    if (typeof winnerId === "string") {
+      await this.declareWinner(code, winnerId, state.likes[winnerId] ?? []);
+    }
   },
 
   /**
@@ -573,6 +652,8 @@ export const roomService = {
    * "เริ่มรอบใหม่"). Clears likes, progress and the previous match.
    */
   async restartRound(code: string, filters: RoomFilters): Promise<void> {
+    const rosterSnap = await get(ref(db(), `rooms/${code}/meta/roster`));
+    const roster = Object.keys((rosterSnap.val() as Record<string, boolean> | null) ?? {});
     const deck = await restaurantService.buildDeck(filters, DECK_SIZE);
     await update(ref(db(), `rooms/${code}`), {
       "meta/status": "active" as RoomStatus,
@@ -582,6 +663,7 @@ export const roomService = {
       likes: null,
       dislikes: null,
       progress: null,
+      activity: activityBaseline(roster),
       results: null,
       finalVote: null,
       match: null,
@@ -633,11 +715,19 @@ export const roomService = {
   ): () => void {
     let advancing = false;
     let graceTimer: ReturnType<typeof setTimeout> | null = null;
+    let idleTimer: ReturnType<typeof setTimeout> | null = null;
 
     const clearGrace = () => {
       if (graceTimer) {
         clearTimeout(graceTimer);
         graceTimer = null;
+      }
+    };
+
+    const clearIdle = () => {
+      if (idleTimer) {
+        clearTimeout(idleTimer);
+        idleTimer = null;
       }
     };
 
@@ -670,9 +760,32 @@ export const roomService = {
       }, DISCONNECT_GRACE_MS);
     };
 
+    // No data change fires while an idle voter just sits there, so when the round
+    // is blocked only by voters who could still time out, wake at the nearest
+    // idle deadline and re-evaluate against fresh state (re-armed each update).
+    const scheduleIdleRecheck = (state: GameState) => {
+      clearIdle();
+      const deadline = nextIdleDeadline(state);
+      if (deadline === null) return;
+      const wait = Math.max(0, deadline - Date.now()) + 500;
+      idleTimer = setTimeout(() => {
+        idleTimer = null;
+        get(ref(db(), `rooms/${code}`))
+          .then((snap) => {
+            if (!snap.exists()) return;
+            const fresh = toGameState(code, snap.val() as RawRoom, myUid);
+            if (!advancing && fresh.room.status === "active" && deckRoundComplete(fresh)) {
+              advance(() => roomService.completeDeckResults(code, fresh));
+            }
+          })
+          .catch((err) => console.error("[roomService] idle re-check failed", err));
+      }, wait);
+    };
+
     const unsubscribe = onValue(ref(db(), `rooms/${code}`), (snap) => {
       if (!snap.exists()) {
         clearGrace();
+        clearIdle();
         callback(null);
         return;
       }
@@ -685,16 +798,20 @@ export const roomService = {
       if (state.room.status === "active") {
         if (allVotersFinished(state)) {
           clearGrace();
+          clearIdle();
           advance(() => roomService.completeDeckResults(code, state));
         } else if (deckRoundComplete(state)) {
+          clearIdle();
           scheduleGrace(
             (fresh) => roomService.completeDeckResults(code, fresh),
             (fresh) => fresh.room.status === "active" && deckRoundComplete(fresh),
           );
         } else {
           clearGrace();
+          scheduleIdleRecheck(state);
         }
       } else if (state.room.status === "final_vote") {
+        clearIdle();
         if (allFinalVotesIn(state)) {
           clearGrace();
           advance(() => roomService.resolveFinalVote(code, state));
@@ -708,11 +825,13 @@ export const roomService = {
         }
       } else {
         clearGrace();
+        clearIdle();
       }
     });
 
     return () => {
       clearGrace();
+      clearIdle();
       unsubscribe();
     };
   },

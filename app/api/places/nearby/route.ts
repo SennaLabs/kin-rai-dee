@@ -170,27 +170,40 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const upstream = await fetch(SEARCH_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": apiKey,
-      "X-Goog-FieldMask": FIELD_MASK,
-    },
-    body: JSON.stringify({
-      includedTypes,
-      maxResultCount: MAX_RESULTS,
-      rankPreference: "POPULARITY",
-      languageCode: "th",
-      regionCode: "TH",
-      locationRestriction: {
-        circle: {
-          center: { latitude: lat, longitude: lng },
-          radius,
-        },
+  let upstream: Response;
+  try {
+    upstream = await fetch(SEARCH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": FIELD_MASK,
       },
-    }),
-  });
+      body: JSON.stringify({
+        includedTypes,
+        maxResultCount: MAX_RESULTS,
+        rankPreference: "POPULARITY",
+        languageCode: "th",
+        regionCode: "TH",
+        locationRestriction: {
+          circle: {
+            center: { latitude: lat, longitude: lng },
+            radius,
+          },
+        },
+      }),
+    });
+  } catch (err) {
+    // Network/DNS/timeout reaching Google — return a clean 502 so the client's
+    // getNearby falls back to mock instead of surfacing an unhandled 500.
+    return NextResponse.json(
+      {
+        status: "ERROR",
+        error_message: err instanceof Error ? err.message : "Places API request failed",
+      },
+      { status: 502 },
+    );
+  }
 
   const data = await upstream.json().catch(() => ({}));
 

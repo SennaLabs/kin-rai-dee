@@ -103,6 +103,14 @@
           }
         },
 
+        "activity": {
+          ".write": "auth != null && root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid",
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && root.child('rooms').child($code).child('meta').child('status').val() === 'active'",
+            ".validate": "newData.isNumber() && newData.val() <= now"
+          }
+        },
+
         "results": {
           ".write": "auth != null && ((root.child('rooms').child($code).child('meta').child('hostId').val() === auth.uid && !newData.exists()) || (!data.exists() && newData.exists() && root.child('rooms').child($code).child('participants').child(auth.uid).exists() && root.child('rooms').child($code).child('meta').child('status').val() === 'active'))",
           "computedAt": { ".validate": "newData.isNumber()" },

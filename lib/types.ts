@@ -124,6 +124,8 @@ export type GameState = {
   dislikes: Record<string, string[]>;
   /** uid → how many cards that player has swiped (resume cursor) */
   progress: Record<string, number>;
+  /** uid → last-swipe server timestamp; idle voters stop blocking the round */
+  activity: Record<string, number>;
   /** ranked collect-all results after everyone finishes the deck */
   results: RankedResult[];
   /** active tie-break round, if the top result is tied */
