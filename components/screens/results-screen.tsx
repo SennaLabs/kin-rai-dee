@@ -1,6 +1,7 @@
 "use client";
 
 import { NavigationArrowIcon, TrophyIcon } from "@phosphor-icons/react";
+import { useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { FoodPhoto } from "@/components/ui/food-photo";
@@ -99,6 +100,7 @@ export function ResultsScreen({
   onAgain,
   onHome,
   onPick,
+  canRestart = true,
 }: {
   winner: Restaurant;
   ranked: RankedRestaurant[];
@@ -107,6 +109,7 @@ export function ResultsScreen({
   onAgain: () => void;
   onHome: () => void;
   onPick: (r: Restaurant) => void;
+  canRestart?: boolean;
 }) {
   const winnerRow = ranked.find((row) => row.restaurantId === winner.id);
 
@@ -155,10 +158,21 @@ export function ResultsScreen({
       <div className="shrink-0 pt-3 px-6 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col gap-2.25">
         <PrimaryButton onClick={onOpen}>ดูรายละเอียดร้านที่ชนะ</PrimaryButton>
         <button
-          className="rm-tap font-display bg-transparent border-none text-ink-2 font-semibold text-[14.5px] cursor-pointer p-1.5"
-          onClick={onAgain}>
+          className={cn(
+            "rm-tap font-display bg-transparent border-none font-semibold text-[14.5px] p-1.5",
+            canRestart
+              ? "text-ink-2 cursor-pointer"
+              : "text-ink-3 cursor-not-allowed"
+          )}
+          onClick={onAgain}
+          disabled={!canRestart}>
           สุ่มร้านชุดใหม่
         </button>
+        {!canRestart && (
+          <p className="m-0 text-center text-[13px] text-ink-3 font-semibold">
+            ต้องมีอย่างน้อย 2 คน
+          </p>
+        )}
         <button
           className="rm-tap font-display bg-transparent border-none text-ink-3 font-medium text-[13.5px] cursor-pointer p-1"
           onClick={onHome}>
@@ -172,17 +186,35 @@ export function ResultsScreen({
 export function FinalVoteScreen({
   finalVote,
   options,
-  players,
+  voterCount,
   myUid,
   onVote,
 }: {
   finalVote: FinalVoteRound;
   options: Restaurant[];
-  players: Player[];
+  voterCount: number;
   myUid: string;
-  onVote: (restaurantId: string) => void;
+  onVote: (restaurantId: string) => void | Promise<void>;
 }) {
   const myVote = finalVote.votes[myUid];
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [voteError, setVoteError] = useState<string | null>(null);
+
+  async function handleVote(id: string) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setVoteError(null);
+    try {
+      await onVote(id);
+    } catch (e) {
+      setVoteError(e instanceof Error ? e.message : "เกิดข้อผิดพลาด");
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }
 
   return (
     <Screen bg="var(--cream)">
@@ -205,13 +237,17 @@ export function FinalVoteScreen({
             return (
               <button
                 key={r.id}
+                disabled={busy}
                 className={cn(
-                  "rm-tap flex items-center gap-3.25 w-full p-3 rounded-xl cursor-pointer text-left shadow-card",
+                  "rm-tap flex items-center gap-3.25 w-full p-3 rounded-xl text-left shadow-card",
+                  busy
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer",
                   selected
                     ? "border-2 border-coral bg-[rgba(255,90,60,0.07)]"
                     : "border-2 border-transparent bg-white",
                 )}
-                onClick={() => onVote(r.id)}>
+                onClick={() => handleVote(r.id)}>
                 <div className="w-18.5 h-18.5 rounded-2xl overflow-hidden shrink-0">
                   <FoodPhoto r={r} label={false} />
                 </div>
@@ -229,7 +265,7 @@ export function FinalVoteScreen({
                         "text-xs font-extrabold",
                         selected ? "text-cta" : "text-ink-3",
                       )}>
-                      โหวตแล้ว {votes}/{players.length}
+                      โหวตแล้ว {votes}/{voterCount}
                     </span>
                   </div>
                 </div>
@@ -239,8 +275,14 @@ export function FinalVoteScreen({
         </div>
       </div>
 
-      <div className="shrink-0 pt-3 px-6 pb-[max(22px,env(safe-area-inset-bottom))] text-center text-ink-3 text-[13px] font-semibold">
-        {myVote ? "รอเพื่อนโหวตให้ครบ…" : "เลือกร้านที่คะแนนเสมอกัน 1 ร้าน"}
+      <div className="shrink-0 pt-3 px-6 pb-[max(22px,env(safe-area-inset-bottom))] text-center text-[13px] font-semibold">
+        {voteError ? (
+          <span className="text-cta">{voteError}</span>
+        ) : myVote ? (
+          <span className="text-ink-3">รอเพื่อนโหวตให้ครบ…</span>
+        ) : (
+          <span className="text-ink-3">เลือกร้านที่คะแนนเสมอกัน 1 ร้าน</span>
+        )}
       </div>
     </Screen>
   );

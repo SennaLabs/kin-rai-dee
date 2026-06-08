@@ -231,7 +231,7 @@ export function SwipeScreen({
         {/* progress + teaser */}
         <div className="mt-3 flex items-center gap-3">
           <div className="flex-1">
-            <ProgressBar value={idx} max={deck.length} />
+            <ProgressBar value={idx} max={Math.max(deck.length, 1)} />
           </div>
           <span className="font-semibold text-[13px] text-ink-2 whitespace-nowrap">
             ใบ {Math.min(idx + 1, deck.length)}/{deck.length}

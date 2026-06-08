@@ -45,7 +45,10 @@ export function Avatar({ p, size = 40, dim, ring, check, joinPop }: AvatarProps)
           : p.emoji}
       </div>
       <span
-        className="absolute -right-px -bottom-px min-w-2.5 min-h-2.5 rounded-full bg-good border-2 border-cream"
+        className={cn(
+          "absolute -right-px -bottom-px min-w-2.5 min-h-2.5 rounded-full border-2 border-cream",
+          p.connected !== false ? "bg-good" : "bg-ink-3"
+        )}
         style={{ width: size * 0.28, height: size * 0.28 }}
       />
       {check && (

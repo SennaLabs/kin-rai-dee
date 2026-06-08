@@ -279,6 +279,15 @@ button.rm-btn:focus-visible,
     transform: translateY(-10px) rotate(3deg);
   }
 }
+@keyframes rmBob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(4deg);
+  }
+}
 @keyframes rmScreenIn {
   0% {
     transform: translateX(22px);

@@ -77,6 +77,7 @@ export function PrimaryButton({
 type SecondaryButtonProps = {
   children: ReactNode;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  disabled?: boolean;
   style?: CSSProperties;
   ariaLabel?: string;
   className?: string;
@@ -86,6 +87,7 @@ type SecondaryButtonProps = {
 export function SecondaryButton({
   children,
   onClick,
+  disabled,
   style,
   ariaLabel,
   className,
@@ -94,14 +96,19 @@ export function SecondaryButton({
     <button
       className={cn(
         "rm-btn rm-tap font-display",
-        "w-full min-h-14 rounded-pill bg-white/65 text-cta border-2 border-coral font-semibold text-lg cursor-pointer transition-transform duration-150 ease-[cubic-bezier(.34,1.56,.64,1)] active:scale-[0.96]",
+        "w-full min-h-14 rounded-pill font-semibold text-lg transition-transform duration-150 ease-[cubic-bezier(.34,1.56,.64,1)]",
+        disabled
+          ? "bg-white/40 text-ink-3 border-2 border-line-strong cursor-not-allowed"
+          : "bg-white/65 text-cta border-2 border-coral cursor-pointer active:scale-[0.96]",
         className
       )}
       aria-label={ariaLabel}
       onClick={(e) => {
+        if (disabled) return;
         buzz(10);
         onClick?.(e);
       }}
+      disabled={disabled}
       style={style}
     >
       {children}

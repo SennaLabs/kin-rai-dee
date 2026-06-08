@@ -47,6 +47,7 @@ type MatchScreenProps = {
   onHome: () => void;
   reduced: boolean;
   confetti?: boolean;
+  canRestart?: boolean;
 };
 
 export function MatchScreen({
@@ -58,6 +59,7 @@ export function MatchScreen({
   onHome,
   reduced,
   confetti = true,
+  canRestart = true,
 }: MatchScreenProps) {
   // phase: matching → spinning → revealed
   const [phase, setPhase] = useState<"matching" | "spinning" | "revealed">(
@@ -253,15 +255,26 @@ export function MatchScreen({
               onClick={onOpen}
             >
               <span className="inline-flex items-center justify-center gap-2">
-                ดูรายละเอียดร้าน <ArrowRightIcon size={20} weight="bold" />
+                ดูอันดับทั้งหมด <ArrowRightIcon size={20} weight="bold" />
               </span>
             </PrimaryButton>
             <button
-              className="rm-tap font-display bg-transparent border-none text-white font-medium text-[15px] cursor-pointer p-2 opacity-[0.92]"
+              className={cn(
+                "rm-tap font-display bg-transparent border-none text-white font-medium text-[15px] p-2",
+                canRestart
+                  ? "cursor-pointer opacity-[0.92]"
+                  : "cursor-not-allowed opacity-45"
+              )}
               onClick={onAgain}
+              disabled={!canRestart}
             >
               หาร้านอื่นต่อ
             </button>
+            {!canRestart && (
+              <p className="m-0 text-center text-[13px] text-white/75 font-semibold">
+                ต้องมีอย่างน้อย 2 คน
+              </p>
+            )}
             <button
               className="rm-tap font-display bg-transparent border-none text-white font-normal text-sm cursor-pointer py-1 px-2 opacity-70"
               onClick={onHome}

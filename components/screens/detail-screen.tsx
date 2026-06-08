@@ -56,6 +56,7 @@ type DetailScreenProps = {
   players: Player[];
   /** true on the matched card; false when inspecting a pick from no-match */
   matched: boolean;
+  canRestart?: boolean;
   onBack: () => void;
   onAgain: () => void;
   onHome: () => void;
@@ -65,6 +66,7 @@ export function DetailScreen({
   r,
   players,
   matched,
+  canRestart = true,
   onBack,
   onAgain,
   onHome,
@@ -220,12 +222,18 @@ export function DetailScreen({
 
         <SecondaryButton
           onClick={onAgain}
+          disabled={!canRestart}
           ariaLabel="เริ่มรอบใหม่"
           className="mt-3.5 min-h-12.5 text-base">
           <span className="inline-flex items-center justify-center gap-1.5">
             <ArrowsClockwiseIcon size={18} weight="bold" /> เริ่มรอบใหม่
           </span>
         </SecondaryButton>
+        {!canRestart && (
+          <p className="m-0 mt-2 text-center text-[13px] text-ink-3 font-semibold">
+            ต้องมีอย่างน้อย 2 คน
+          </p>
+        )}
         <button
           className="rm-tap font-display w-full mt-2 bg-transparent border-none text-ink-3 font-medium text-[13.5px] cursor-pointer px-2 py-1.5"
           onClick={onHome}>
