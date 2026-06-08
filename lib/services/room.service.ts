@@ -417,6 +417,32 @@ export const roomService = {
   },
 
   /**
+   * Probe whether a room is joinable (exists, not expired, still in lobby)
+   * without writing a participant — for a PIN step that validates before
+   * collecting a profile. join() re-runs the same checks at commit time to
+   * guard the race between the two steps. Returns the normalized code or throws.
+   */
+  async checkJoinable(code: string): Promise<string> {
+    const normalized = code.toUpperCase();
+    const base = `rooms/${normalized}/meta`;
+    const [statusSnap, expiresSnap] = await Promise.all([
+      get(ref(db(), `${base}/status`)),
+      get(ref(db(), `${base}/expiresAt`)),
+    ]);
+    if (!statusSnap.exists()) {
+      throw new Error(`ไม่พบห้องรหัส "${normalized}" หรือโค้ดหมดอายุ`);
+    }
+    const expiresAt = expiresSnap.val();
+    if (typeof expiresAt === "number" && expiresAt < Date.now()) {
+      throw new Error(`ห้องรหัส "${normalized}" หมดอายุแล้ว — เริ่มห้องใหม่ได้เลย`);
+    }
+    if ((statusSnap.val() as RoomStatus) !== "lobby") {
+      throw new Error("รอบนี้เริ่มไปแล้ว — เริ่มรอบใหม่ได้เลย");
+    }
+    return normalized;
+  },
+
+  /**
    * Join a room by code. Rejects unknown rooms and any round that has already
    * started (late-join, wiki §2.7 #3). Returns the normalized code.
    */
@@ -459,20 +485,52 @@ export const roomService = {
     return normalized;
   },
 
+  /** Overwrite a participant's name + avatar (avatar lives in the `emoji` field). */
+  async updateProfile(
+    code: string,
+    uid: string,
+    profile: { name: string; emoji: string },
+  ): Promise<void> {
+    await update(ref(db(), `rooms/${code}/participants/${uid}`), {
+      name: profile.name,
+      emoji: profile.emoji,
+    });
+  },
+
+  /** Host edits room filters before the round starts; clients re-derive live. */
+  async updateFilters(code: string, filters: RoomFilters): Promise<void> {
+    await update(ref(db(), `rooms/${code}/meta`), { filters: clean(filters) });
+  },
+
   /**
-   * Wire up presence (wiki §3.7): flag the participant connected, and register
-   * an onDisconnect that flips it to false the moment the socket drops. The
-   * returned cleanup marks the participant offline on a deliberate leave.
+   * Wire up presence (wiki §3.7). Subscribing to `.info/connected` instead of
+   * doing a one-shot write is what makes reconnect automatic: it re-fires `true`
+   * every time the socket comes back — e.g. after the phone screen sleeps — so we
+   * re-arm onDisconnect and re-flag connected each time. onDisconnect handlers are
+   * consumed once they fire server-side, hence re-arming on every connect.
    */
   setupPresence(code: string, uid: string): () => void {
     const connRef = ref(db(), `rooms/${code}/participants/${uid}/connected`);
-    void update(ref(db(), `rooms/${code}/participants/${uid}`), { connected: true });
-    void onDisconnect(connRef).set(false);
-    // On cleanup only cancel the handler — never re-write the node, or we'd
-    // resurrect a participant that leave() just removed. An ungraceful close is
-    // still covered: onDisconnect flips connected → false server-side, and the
-    // player's earlier likes keep counting (wiki §2.7 #1).
+    const infoRef = ref(db(), ".info/connected");
+    let cancelled = false;
+    const unsubscribe = onValue(infoRef, (snap) => {
+      if (snap.val() !== true || cancelled) return;
+      // Arm the drop handler before flagging online — the reverse order leaves a
+      // window where a disconnect between the two writes sticks us online.
+      void onDisconnect(connRef)
+        .set(false)
+        .then(() => {
+          // leave() may have removed us mid-flight; never resurrect the node.
+          if (!cancelled) {
+            void update(ref(db(), `rooms/${code}/participants/${uid}`), {
+              connected: true,
+            });
+          }
+        });
+    });
     return () => {
+      cancelled = true;
+      unsubscribe();
       void onDisconnect(connRef).cancel();
     };
   },
@@ -493,6 +551,8 @@ export const roomService = {
 
     const roster = Object.keys(raw.participants ?? {});
     const deck = await restaurantService.buildDeck(filters, DECK_SIZE);
+    if (deck.length === 0)
+      throw new Error("ไม่พบร้านในเงื่อนไขนี้ ลองปรับเงื่อนไขแล้วเริ่มใหม่");
 
     await update(ref(db(), `rooms/${code}`), {
       "meta/status": "active" as RoomStatus,
@@ -594,9 +654,20 @@ export const roomService = {
 
   /** One vote per player per tie-break round. The latest selection replaces theirs. */
   async submitFinalVote(code: string, uid: string, restaurantId: string): Promise<void> {
-    await update(ref(db(), `rooms/${code}/finalVote/votes`), {
-      [uid]: restaurantId,
-    });
+    const result = await runTransaction(
+      ref(db(), `rooms/${code}/finalVote`),
+      (current) => {
+        if (!current) return; // round already resolved
+        const options = Object.keys(current.options ?? {});
+        if (!options.includes(restaurantId)) return; // stale option — reject
+        return {
+          ...current,
+          votes: { ...(current.votes ?? {}), [uid]: restaurantId },
+        };
+      },
+    );
+    if (!result.committed)
+      throw new Error("รอบโหวตเปลี่ยนแล้ว ลองอีกครั้ง");
   },
 
   /** Resolve a complete final-vote round, repeating with tied options if needed. */
@@ -655,6 +726,8 @@ export const roomService = {
     const rosterSnap = await get(ref(db(), `rooms/${code}/meta/roster`));
     const roster = Object.keys((rosterSnap.val() as Record<string, boolean> | null) ?? {});
     const deck = await restaurantService.buildDeck(filters, DECK_SIZE);
+    if (deck.length === 0)
+      throw new Error("ไม่พบร้านในเงื่อนไขนี้ ลองปรับเงื่อนไขแล้วลองใหม่");
     await update(ref(db(), `rooms/${code}`), {
       "meta/status": "active" as RoomStatus,
       "meta/filters": clean(filters),
