@@ -1,0 +1,11 @@
+/* TEAM */
+Company: Senna Labs
+Site: https://sennalabs.com
+Contact: hello [at] sennalabs.com
+Location: Bangkok, Thailand
+
+/* SITE */
+Last update: 2026/06/05
+Language: Thai
+Doctype: HTML5
+Components: Next.js, React, Firebase, Tailwind CSS

@@ -100,6 +100,16 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
       <div className="shrink-0 pt-4 px-6 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col gap-3 relative z-2">
         <PrimaryButton onClick={onCreate}>สร้างห้อง</PrimaryButton>
         <SecondaryButton onClick={onJoin}>เข้าร่วมห้อง</SecondaryButton>
+        <p className="mt-1 text-center text-[11px] text-ink-3">
+          © 2026{" "}
+          <a
+            href="https://sennalabs.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-ink-2 underline-offset-2 hover:underline">
+            Senna Labs
+          </a>
+        </p>
       </div>
     </Screen>
   );

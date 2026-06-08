@@ -20,6 +20,30 @@ export const metadata: Metadata = {
   title: "ไม่รู้กินไร — ปัดหาร้านพร้อมกัน",
   description:
     "เถียงกันทุกวันว่าจะกินไหน จบในห้องเดียว — ปัดการ์ดหาร้านพร้อมเพื่อน",
+  applicationName: "ไม่รู้กินไร",
+  authors: [{ name: "Senna Labs" }],
+  creator: "Senna Labs",
+  publisher: "Senna Labs",
+};
+
+const organizationLd = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "ไม่รู้กินไร",
+  description:
+    "เถียงกันทุกวันว่าจะกินไหน จบในห้องเดียว — ปัดการ์ดหาร้านพร้อมเพื่อน",
+  applicationCategory: "LifestyleApplication",
+  operatingSystem: "Web",
+  author: {
+    "@type": "Organization",
+    name: "Senna Labs",
+    url: "https://sennalabs.com",
+  },
+  publisher: {
+    "@type": "Organization",
+    name: "Senna Labs",
+    url: "https://sennalabs.com",
+  },
 };
 
 export const viewport: Viewport = {
@@ -36,7 +60,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="th" className={`${mitr.variable} ${sarabun.variable} antialiased`}>
-      <body>{children}</body>
+      <body suppressHydrationWarning>
+        {children}
+        <link rel="author" type="text/plain" href="/humans.txt" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+        />
+      </body>
     </html>
   );
 }
