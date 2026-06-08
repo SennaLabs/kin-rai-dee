@@ -41,7 +41,7 @@ export function NoMatchScreen({
             lineHeight: 1.2,
           }}
         >
-          No restaurants matched this group&apos;s preferences.
+          ยังไม่มีร้านที่ทุกคนถูกใจตรงกัน
         </h1>
         <p
           style={{
@@ -51,7 +51,7 @@ export function NoMatchScreen({
             lineHeight: 1.45,
           }}
         >
-          Everyone finished the deck, but no restaurant received a like.
+          ทุกคนปัดครบแล้ว แต่ยังไม่มีร้านไหนได้ใจใครเลย
         </p>
       </div>
 
@@ -101,7 +101,7 @@ export function NoMatchScreen({
           gap: 10,
         }}
       >
-        <PrimaryButton onClick={onNewGame}>Start a new game</PrimaryButton>
+        <PrimaryButton onClick={onNewGame}>เริ่มเกมใหม่</PrimaryButton>
         <button
           className="rm-tap font-display"
           onClick={onRegenerate}
@@ -117,7 +117,7 @@ export function NoMatchScreen({
           }}
         >
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            Regenerate a new deck <ArrowsClockwiseIcon size={18} weight="bold" />
+            สุ่มร้านชุดใหม่ <ArrowsClockwiseIcon size={18} weight="bold" />
           </span>
         </button>
         <button
@@ -134,7 +134,7 @@ export function NoMatchScreen({
           }}
         >
           <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-            Adjust filters and try again <SlidersHorizontalIcon size={17} weight="bold" />
+            ปรับเงื่อนไขแล้วลองใหม่ <SlidersHorizontalIcon size={17} weight="bold" />
           </span>
         </button>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
-import { CheckIcon, MapPinIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { CheckIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { buzz } from "@/components/ui/motion";

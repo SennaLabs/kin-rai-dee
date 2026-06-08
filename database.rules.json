@@ -22,7 +22,10 @@
           },
 
           "createdAt": { ".validate": "newData.isNumber() && newData.val() <= now" },
-          "expiresAt": { ".validate": "newData.isNumber() && newData.val() > now" },
+          "expiresAt": {
+            ".read": "auth != null",
+            ".validate": "newData.isNumber() && newData.val() > now"
+          },
           "voterCount": { ".validate": "newData.isNumber() && newData.val() >= 0" },
           "deckSize": { ".validate": "newData.isNumber() && newData.val() >= 0" },
 

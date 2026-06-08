@@ -118,7 +118,7 @@ export type GameState = {
   room: Room;
   /** shared, immutable deck — every voter sees the same cards in the same order */
   deck: Restaurant[];
-  /** restaurantId → uids that liked it (pass is not recorded) */
+  /** restaurantId → uids that liked it */
   likes: Record<string, string[]>;
   /** restaurantId → uids that passed it */
   dislikes: Record<string, string[]>;

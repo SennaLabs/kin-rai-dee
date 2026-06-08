@@ -304,11 +304,9 @@ export const restaurantService = {
       if (relaxed.length > results.length) results = relaxed;
     }
 
-    // Mock data only when the Places API yielded nothing real (offline / remote
-    // area), so the room is never unplayable. We never blend mock into a real
-    // deck.
-   
-
+    // When even widening + relaxing yields nothing, getNearby's own catch has
+    // already substituted mock restaurants (offline / remote area), so the room
+    // is never unplayable. Mock is never blended into a real deck here.
     return shuffle(results).slice(0, size);
   },
 };

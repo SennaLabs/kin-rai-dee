@@ -36,6 +36,7 @@ const DECK_SIZE = 20; // wiki §2.3 — ~20 cards per deck
 const CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // base32, no confusing chars (§3.8)
 const CODE_LEN = 4;
 const MAX_CODE_TRIES = 12;
+const DISCONNECT_GRACE_MS = 20_000; // wiki §2.7 #1 — wait out connection flaps before dropping a voter
 
 // ── raw RTDB shapes ─────────────────────────────────────────────────────────
 
@@ -189,6 +190,41 @@ function allFinalVotesIn(state: GameState): boolean {
   );
 }
 
+/**
+ * The locked-roster voters we still wait on: everyone minus those currently
+ * disconnected. A dropped voter doesn't block round completion (wiki §2.7 #1) —
+ * their already-cast likes still count in the ranking below.
+ */
+function requiredVoters(state: GameState): string[] {
+  const players = new Map(state.room.players.map((p) => [p.id, p]));
+  return votersFromState(state).filter((uid) => players.get(uid)?.connected ?? false);
+}
+
+/**
+ * Deck round is finishable once every voter has either swiped the whole deck or
+ * dropped out. Unlike allVotersFinished (full roster, the no-disconnect fast
+ * path) this excludes disconnected stragglers so the round can't hang forever.
+ */
+function deckRoundComplete(state: GameState): boolean {
+  const voters = votersFromState(state);
+  if (state.room.deckSize <= 0 || voters.length === 0) return false;
+  const players = new Map(state.room.players.map((p) => [p.id, p]));
+  return voters.every((uid) => {
+    const finished = (state.progress[uid] ?? 0) >= state.room.deckSize;
+    return finished || !(players.get(uid)?.connected ?? false);
+  });
+}
+
+/** Tie-break round is resolvable once every still-connected voter has voted. */
+function finalVoteComplete(state: GameState): boolean {
+  if (!state.finalVote || votersFromState(state).length === 0) return false;
+  const options = new Set(state.finalVote.options);
+  return requiredVoters(state).every((uid) => {
+    const vote = state.finalVote?.votes[uid];
+    return typeof vote === "string" && options.has(vote);
+  });
+}
+
 function finalVoteWinners(
   finalVote: FinalVoteRound,
   voters: string[],
@@ -320,11 +356,21 @@ export const roomService = {
     userId: string,
   ): Promise<string> {
     const normalized = code.toUpperCase();
-    // Read only meta/status — the single node a non-member is allowed to read
-    // (database.rules.json) — to confirm the room exists and is still joinable.
-    const statusSnap = await get(ref(db(), `rooms/${normalized}/meta/status`));
+    // meta/status and meta/expiresAt are the only nodes a non-member may read
+    // (database.rules.json) — enough to confirm the room exists, hasn't expired
+    // (wiki §2.7 #8), and is still in the lobby.
+    const base = `rooms/${normalized}/meta`;
+    const [statusSnap, expiresSnap] = await Promise.all([
+      get(ref(db(), `${base}/status`)),
+      get(ref(db(), `${base}/expiresAt`)),
+    ]);
     if (!statusSnap.exists()) {
       throw new Error(`ไม่พบห้องรหัส "${normalized}" หรือโค้ดหมดอายุ`);
+    }
+
+    const expiresAt = expiresSnap.val();
+    if (typeof expiresAt === "number" && expiresAt < Date.now()) {
+      throw new Error(`ห้องรหัส "${normalized}" หมดอายุแล้ว — เริ่มห้องใหม่ได้เลย`);
     }
 
     if ((statusSnap.val() as RoomStatus) !== "lobby") {
@@ -433,7 +479,7 @@ export const roomService = {
    * ending the round before completion.
    */
   async completeDeckResults(code: string, state: GameState): Promise<void> {
-    if (!allVotersFinished(state) || state.results.length > 0 || state.match) return;
+    if (!deckRoundComplete(state) || state.results.length > 0 || state.match) return;
 
     const voters = votersFromState(state);
     const ranking = rankDeck(state.deck, state.likes, voters);
@@ -483,9 +529,12 @@ export const roomService = {
 
   /** Resolve a complete final-vote round, repeating with tied options if needed. */
   async resolveFinalVote(code: string, state: GameState): Promise<void> {
-    if (!state.finalVote || !allFinalVotesIn(state) || state.match) return;
+    if (!state.finalVote || !finalVoteComplete(state) || state.match) return;
 
+    // Tally over the full roster (a dropped voter's earlier vote still counts),
+    // but only wait on still-connected voters to have voted (wiki §2.7 #1).
     const voters = votersFromState(state);
+    const required = requiredVoters(state);
     const winners = finalVoteWinners(state.finalVote, voters);
 
     const result = await runTransaction(ref(db(), `rooms/${code}/finalVote`), (current) => {
@@ -497,7 +546,7 @@ export const roomService = {
         votes,
         createdAt: asNumber(current.createdAt, Date.now()),
       };
-      if (!voters.every((uid) => currentRound.options.includes(votes[uid]))) return;
+      if (!required.every((uid) => currentRound.options.includes(votes[uid]))) return;
 
       const roundWinners = finalVoteWinners(currentRound, voters);
       if (roundWinners.length === 1) {
@@ -583,9 +632,47 @@ export const roomService = {
     callback: (state: GameState | null) => void,
   ): () => void {
     let advancing = false;
+    let graceTimer: ReturnType<typeof setTimeout> | null = null;
 
-    return onValue(ref(db(), `rooms/${code}`), (snap) => {
+    const clearGrace = () => {
+      if (graceTimer) {
+        clearTimeout(graceTimer);
+        graceTimer = null;
+      }
+    };
+
+    const advance = (run: () => Promise<void>) => {
+      advancing = true;
+      run()
+        .catch((err) => console.error("[roomService] advance failed", err))
+        .finally(() => {
+          advancing = false;
+        });
+    };
+
+    // A round is finishable only by excluding disconnected stragglers: wait out
+    // the grace period (wiki §2.7 #1), then re-read fresh state and complete
+    // only if they're still gone — someone may have reconnected and resumed.
+    const scheduleGrace = (
+      run: (fresh: GameState) => Promise<void>,
+      stillReady: (fresh: GameState) => boolean,
+    ) => {
+      if (graceTimer) return;
+      graceTimer = setTimeout(() => {
+        graceTimer = null;
+        get(ref(db(), `rooms/${code}`))
+          .then((snap) => {
+            if (!snap.exists()) return;
+            const fresh = toGameState(code, snap.val() as RawRoom, myUid);
+            if (!advancing && stillReady(fresh)) advance(() => run(fresh));
+          })
+          .catch((err) => console.error("[roomService] grace re-check failed", err));
+      }, DISCONNECT_GRACE_MS);
+    };
+
+    const unsubscribe = onValue(ref(db(), `rooms/${code}`), (snap) => {
       if (!snap.exists()) {
+        clearGrace();
         callback(null);
         return;
       }
@@ -595,23 +682,38 @@ export const roomService = {
 
       if (advancing) return;
 
-      if (state.room.status === "active" && allVotersFinished(state)) {
-        advancing = true;
-        roomService
-          .completeDeckResults(code, state)
-          .catch((err) => console.error("[roomService] completeDeckResults failed", err))
-          .finally(() => {
-            advancing = false;
-          });
-      } else if (state.room.status === "final_vote" && allFinalVotesIn(state)) {
-        advancing = true;
-        roomService
-          .resolveFinalVote(code, state)
-          .catch((err) => console.error("[roomService] resolveFinalVote failed", err))
-          .finally(() => {
-            advancing = false;
-          });
+      if (state.room.status === "active") {
+        if (allVotersFinished(state)) {
+          clearGrace();
+          advance(() => roomService.completeDeckResults(code, state));
+        } else if (deckRoundComplete(state)) {
+          scheduleGrace(
+            (fresh) => roomService.completeDeckResults(code, fresh),
+            (fresh) => fresh.room.status === "active" && deckRoundComplete(fresh),
+          );
+        } else {
+          clearGrace();
+        }
+      } else if (state.room.status === "final_vote") {
+        if (allFinalVotesIn(state)) {
+          clearGrace();
+          advance(() => roomService.resolveFinalVote(code, state));
+        } else if (finalVoteComplete(state)) {
+          scheduleGrace(
+            (fresh) => roomService.resolveFinalVote(code, fresh),
+            (fresh) => fresh.room.status === "final_vote" && finalVoteComplete(fresh),
+          );
+        } else {
+          clearGrace();
+        }
+      } else {
+        clearGrace();
       }
     });
+
+    return () => {
+      clearGrace();
+      unsubscribe();
+    };
   },
 };

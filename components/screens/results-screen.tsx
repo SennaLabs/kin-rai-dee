@@ -19,7 +19,7 @@ function mapsDirLink(r: Restaurant): string {
 }
 
 function scoreText(row: RankedResult): string {
-  return `${row.likes}/${row.voterCount} likes`;
+  return `ถูกใจ ${row.likes}/${row.voterCount}`;
 }
 
 function RankRow({
@@ -146,7 +146,7 @@ function RankRow({
               textDecoration: "none",
             }}
           >
-            Directions <NavigationArrowIcon size={14} weight="fill" />
+            นำทาง <NavigationArrowIcon size={14} weight="fill" />
           </a>
         </div>
       </div>
@@ -194,10 +194,10 @@ export function ResultsScreen({
                 color: "var(--ink)",
               }}
             >
-              Final ranking
+              อันดับสุดท้าย
             </div>
             <div style={{ marginTop: 6, fontSize: 14, color: "var(--ink-3)" }}>
-              Winner: <b style={{ color: "var(--cta)" }}>{winner.name}</b>
+              ร้านที่ชนะ: <b style={{ color: "var(--cta)" }}>{winner.name}</b>
               {winnerRow ? ` · ${scoreText(winnerRow)}` : ""}
             </div>
           </div>
@@ -224,7 +224,7 @@ export function ResultsScreen({
             </div>
           ))}
           <span style={{ marginLeft: 9, fontSize: 12.5, color: "var(--ink-3)" }}>
-            {players.length} voters
+            {players.length} คนโหวต
           </span>
         </div>
       </div>
@@ -265,7 +265,7 @@ export function ResultsScreen({
             padding: 6,
           }}
         >
-          Regenerate a new deck
+          สุ่มร้านชุดใหม่
         </button>
         <button
           className="rm-tap font-display"
@@ -280,7 +280,7 @@ export function ResultsScreen({
             padding: 4,
           }}
         >
-          Back to home
+          กลับหน้าหลัก
         </button>
       </div>
     </Screen>
@@ -306,10 +306,10 @@ export function FinalVoteScreen({
     <Screen bg="var(--cream)">
       <div style={{ flexShrink: 0, padding: "58px 24px 10px", textAlign: "center" }}>
         <div className="font-display" style={{ fontSize: 30, fontWeight: 800, color: "var(--ink)" }}>
-          Final vote
+          โหวตตัดสิน
         </div>
         <div style={{ marginTop: 6, color: "var(--ink-3)", fontSize: 14 }}>
-          Tie-break round {finalVote.round} · pick exactly one restaurant
+          รอบตัดสินที่ {finalVote.round} · เลือกได้ร้านเดียว
         </div>
       </div>
 
@@ -365,7 +365,7 @@ export function FinalVoteScreen({
                         fontWeight: 800,
                       }}
                     >
-                      {votes}/{players.length} final votes
+                      โหวตแล้ว {votes}/{players.length}
                     </span>
                   </div>
                 </div>
@@ -385,7 +385,7 @@ export function FinalVoteScreen({
           fontWeight: 600,
         }}
       >
-        {myVote ? "Waiting for everyone else's final vote..." : "Choose one tied restaurant."}
+        {myVote ? "รอเพื่อนโหวตให้ครบ…" : "เลือกร้านที่คะแนนเสมอกัน 1 ร้าน"}
       </div>
     </Screen>
   );

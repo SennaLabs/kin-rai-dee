@@ -1,8 +1,19 @@
-# Spec: Restaurant Match (working name)
+# ไม่รู้กินไร (kin-rai-dee)
 
-แอป responsive สำหรับสุ่ม/แมตช์ร้านอาหารแบบ realtime ให้คู่หรือกลุ่มเพื่อน — สร้างห้อง, แชร์โค้ด 4 หลัก, ทุกคนปัดการ์ดร้านพร้อมกัน, ร้านที่ทุกคนปัด like ตรงกัน = แมตช์ โดยดึงข้อมูลร้านจริงจาก Google Maps ตามตำแหน่ง
+แอป responsive สำหรับสุ่ม/แมตช์ร้านอาหารแบบ realtime ให้คู่หรือกลุ่มเพื่อน — สร้างห้อง, แชร์โค้ด 4 ตัว, ทุกคนปัดการ์ดร้านพร้อมกัน, จบรอบแล้วระบบจัดอันดับร้านที่ทุกคนถูกใจตรงกันมากสุดให้อัตโนมัติ โดยดึงข้อมูลร้านจริงจาก Google Places ตามตำแหน่ง
 
-Stack เป้าหมาย: **Next.js (App Router) + Tailwind + Firebase (Auth + Realtime Database) + Google Places API (New)**
+Stack: **Next.js 16 (App Router + Turbopack) + React 19 + Tailwind v4 + Firebase (Anonymous Auth + Realtime Database) + Google Places API (New)**
+
+> เอกสารนี้เป็น **as-built** — สะท้อนสิ่งที่ build จริงในโค้ด ไม่ใช่แค่ spec ตั้งต้น แต่ละหัวข้อมี status marker:
+>
+> | | |
+> |---|---|
+> | ✅ | implemented & ใช้งานได้ |
+> | 🟡 | partial — มีบางส่วน |
+> | ⏳ | ยังไม่ทำ / เลื่อนไป phase หลัง |
+> | 💤 | configured แต่ยังไม่ถูกเรียกใช้ |
+>
+> **จุดที่ as-built ต่างจาก spec เดิมอย่างมีนัยสำคัญ:** match policy เป็น **collect-all + จัดอันดับ + โหวตตัดสิน** (ไม่ใช่ first-match-wins) · เก็บทั้ง `likes` และ `dislikes` · `meta` แบนเป็น `filters` ก้อนเดียว · เพิ่ม status `final_vote`/`no_match` + node `results`/`finalVote`/`dislikes` · **Firestore/Storage ยังไม่ถูกใช้** (cache เป็น in-memory) · โค้ดเป็น base32 4 ตัว (อัปจาก 0000–9999)
 
 
 ---
@@ -13,7 +24,7 @@ Stack เป้าหมาย: **Next.js (App Router) + Tailwind + Firebase (Au
 |-----|-----|
 | **ปัญหา** | "ไม่รู้จะกินอะไร" → เถียงกัน → ไม่ได้ข้อสรุป |
 | **วิธีแก้** | ให้ทุกคนปัดร้านพร้อมกัน, ระบบหา "จุดที่ทุกคนเห็นตรงกัน" ให้อัตโนมัติ |
-| **Core loop** | สร้างห้อง → แชร์โค้ด → lobby → ปัดการ์ด (realtime) → **match** → after-match (พาไปกิน) |
+| **Core loop** | สร้างห้อง → แชร์โค้ด → lobby → ปัดการ์ด (realtime) → ทุกคนปัดครบ → **จัดอันดับ** → ชนะ / โหวตตัดสิน / ไม่แมตช์ → after-match |
 | **กลุ่มเป้าหมาย** | คู่รัก, กลุ่มเพื่อน 2–8 คน, ครอบครัว — mobile-first |
 | **เป้าหมายความเร็ว** | จากเปิดแอปถึงได้ร้าน < 60 วินาที |
 
@@ -21,8 +32,8 @@ Stack เป้าหมาย: **Next.js (App Router) + Tailwind + Firebase (Au
 
 
 1. **เร็วกว่าการเถียงกันเอง** — ทุก friction ที่เพิ่มต้องคุ้ม
-2. **เล่นพร้อมกันแต่ไม่ต้อง lockstep** — แต่ละคนปัดตาม pace ตัวเอง, match โผล่สดๆ
-3. **ต้นทุน Places API ต้องคุมได้** — cache + field mask + rate limit เป็น first-class ไม่ใช่ afterthought
+2. **เล่นพร้อมกันแต่ไม่ต้อง lockstep** — แต่ละคนปัดตาม pace ตัวเอง, ผลโผล่สดๆ เมื่อทุกคนปัดครบ
+3. **ต้นทุน Places API ต้องคุมได้** — field mask + cache + App Check เป็น first-class ไม่ใช่ afterthought
 
 
 ---
@@ -33,108 +44,118 @@ Stack เป้าหมาย: **Next.js (App Router) + Tailwind + Firebase (Au
 
 * **Host** — คนสร้างห้อง ตั้งค่า (รัศมี/ราคา/ประเภท), กดเริ่มเกม. หลังเริ่มแล้ว role host แทบไม่สำคัญ (ห้อง self-driving)
 * **Guest / Voter** — คนเข้าร่วมด้วยโค้ด/ลิงก์, ปัดการ์ด
-* ไม่มีระบบ account ใน MVP — ใช้ **Firebase Anonymous Auth** (ได้ `uid` ถาวรต่อ device), ใส่ชื่อเล่น + เลือก avatar ตอนเข้าห้อง
+* ✅ ไม่มีระบบ account — ใช้ **Firebase Anonymous Auth** (ได้ `uid` ถาวรต่อ device), ใส่ชื่อเล่น + เลือก **avatar (SVG)** ตอนเข้าห้อง
 
-### 2.2 Flow A — สร้างห้อง (Create Room)
+### 2.2 Flow A — สร้างห้อง (Create Room)  ✅
 
 ```
 [เปิดแอป] → [กด "สร้างห้อง"]
         → [ขอ location permission]
               ├─ อนุญาต → ใช้ geolocation
-              └─ ปฏิเสธ → fallback: พิมพ์ค้นหา/ปักหมุดบนแผนที่ (Geocoding)
+              └─ ปฏิเสธ/ไม่ได้ → ต้องเปิดสิทธิ์ตำแหน่งก่อน (manual search = ⏳ ปิดไว้)
         → [ตั้งค่า: รัศมี, ช่วงราคา, ประเภทอาหาร, เปิดอยู่ตอนนี้]  (มี default ทั้งหมด, ข้ามได้)
-        → [generate โค้ด 4 หลัก]  (เช็ค uniqueness กับห้อง active)
+        → [generate โค้ด 4 ตัว]  (เช็ค uniqueness กับห้องที่มีอยู่)
         → [เข้า Lobby ในฐานะ host]
 ```
 
-* **โค้ด 4 หลัก** = 0000–9999 (space 10,000). เพียงพอสำหรับ MVP เพราะนับเฉพาะห้อง **active** เท่านั้น + ห้องมี TTL → โค้ดถูก recycle. ดู §3.8 (upgrade path เป็น 6 ตัวอักษรถ้าจำเป็น)
-* **ลิงก์เข้าร่วม**: `app.xxx/j/{code}` — เปิดแล้วเด้งเข้า join flow พร้อมเติมโค้ดให้อัตโนมัติ
+* **โค้ด 4 ตัว = base32** (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`, ตัด 0/O/1/I/L ที่สับสน) → ~1.05M combinations. *(อัปจาก spec เดิม "0000–9999" ตาม upgrade path §3.8 ไปแล้ว)*
+* uniqueness: probe `rooms/{code}/meta/status` (node เดียวที่อ่านได้ก่อนเป็นสมาชิก) ชน → สุ่มใหม่สูงสุด 12 ครั้ง
+* **ลิงก์เข้าร่วม**: `app.xxx/j/{code}` — เปิดแล้วเด้งเข้า join flow พร้อมเติมโค้ดให้อัตโนมัติ ✅
 * location จับครั้งเดียวตอนสร้างห้อง แล้วใช้ค่าเดียวกันทั้งห้อง (ทุกคนเห็น deck เดียวกัน) — *ไม่ใช้* ตำแหน่งของ guest แต่ละคน เพื่อให้ deck sync และคุมต้นทุน
 
-### 2.3 Flow B — เข้าร่วม + Lobby (Join)
+### 2.3 Flow B — เข้าร่วม + Lobby (Join)  ✅
 
 ```
 [กด "เข้าร่วม" / เปิดลิงก์]
-   → [กรอกโค้ด 4 หลัก]  (ลิงก์เติมให้แล้ว)
-   → ห้องมีอยู่ & status == "lobby"?
+   → [กรอกโค้ด 4 ตัว]  (ลิงก์เติมให้แล้ว)
+   → ห้องมีอยู่ & ยังไม่หมดอายุ & status == "lobby"?
         ├─ ใช่   → [ใส่ชื่อ+avatar] → เข้า Lobby
-        ├─ ไม่มี → "ไม่พบห้องนี้ / โค้ดหมดอายุ"
-        └─ active/matched → "รอบนี้เริ่มไปแล้ว" (ดู late-join §2.7 #3)
+        ├─ ไม่มี → "ไม่พบห้องรหัส ... หรือโค้ดหมดอายุ"
+        ├─ หมดอายุ (expiresAt < now) → "ห้อง ... หมดอายุแล้ว" (lazy expiry §2.7 #8) ✅
+        └─ active/อื่นๆ → "รอบนี้เริ่มไปแล้ว" (ดู late-join §2.7 #3)
 ```
 
 **Lobby** แสดง:
 
-* รายชื่อคนในห้อง realtime (เข้า/ออกเห็นทันที) + presence dot (เขียว = online)
-* ค่า setting ของห้อง (host แก้ได้, คนอื่นเห็น read-only)
-* ปุ่ม **"พร้อม"** ต่อคน (optional gate) + ปุ่ม **"เริ่มเกม"** (host เท่านั้น)
-* เงื่อนไขเริ่ม: ผู้เล่น ≥ 2 (solo mode = feature แยก §2.7 #6), และ (option) ทุกคนกดพร้อม
+* รายชื่อคนในห้อง realtime (เข้า/ออกเห็นทันที) + presence dot (เขียว = online), badge โฮสต์
+* ค่า setting ของห้องเป็น tag (host แก้ได้, คนอื่นเห็น read-only)
+* ปุ่ม **"พร้อม"** ต่อคน (optional — โชว์สถานะ แต่ **ไม่ได้ใช้เป็น gate บังคับ**) + ปุ่ม **"เริ่มเกม"** (host เท่านั้น)
+* เงื่อนไขเริ่ม: ผู้เล่น **≥ 2** (solo mode = §2.7 #6 ⏳)
 
-**ตอน host กด "เริ่ม":**
+**ตอน host กด "เริ่ม":** ✅
 
 
-1. ล็อก **roster** = uid ทุกคนที่อยู่ใน lobby ตอนนั้น → กลายเป็น set ของ "voters", `voterCount = N`
-2. server-side สร้าง **deck**: ยิง Nearby Search 1 ครั้ง → ได้ \~20 ร้าน → enrich (photo URL, rating, ฯลฯ) → shuffle ด้วย seed → เขียนลง `deck` (immutable)
-3. `status: "lobby" → "active"`
+1. ล็อก **roster** = uid ทุกคนที่อยู่ใน lobby ตอนนั้น → set ของ "voters", `voterCount = N`
+2. สร้าง **deck**: ยิง Nearby Search 1 ครั้ง → ได้ ~20 ร้าน → map เป็น Restaurant snapshot → shuffle (Fisher–Yates) → เขียนลง `deck` (immutable)
+3. `status: "lobby" → "active"`, reset `likes/dislikes/progress/results/finalVote/match`
 4. ทุก client เด้งเข้าหน้า swipe พร้อมกัน
 
-### 2.4 Flow C — Swipe Session (หัวใจ realtime)
+### 2.4 Flow C — Swipe Session (หัวใจ realtime)  ✅
 
 **โมเดล: shared deck + ปัดอิสระตาม pace ตัวเอง (ไม่ lockstep)**
 
 * ทุกคนได้ **deck ชุดเดียวกัน เรียงเหมือนกัน** (index 0..N-1)
-* แต่ละคนปัดเองตามจังหวะตัวเอง → ขวา = like, ซ้าย = pass
-* match จะ "โผล่" ขึ้นมาเองทันทีที่ครบเงื่อนไข (ดู §2.5) — ไม่ต้องรอให้ทุกคนปัดถึงใบเดียวกัน
+* แต่ละคนปัดเองตามจังหวะตัวเอง → ขวา = like, ซ้าย = pass (เก็บทั้งคู่: `likes`/`dislikes`)
+* แต่ละ swipe เขียน `likes|dislikes/{restaurantId}/{uid}` + `progress/{uid}` พร้อมกันแบบ atomic
+* ผลแมตช์/อันดับ **โผล่หลังทุกคนปัดครบ deck** (ดู §2.5) — collect-all ไม่ใช่ first-match
 
-UI ระหว่างปัด:
+> ⏳ **lockstep mode** (ทุกคนดูใบเดียวกันพร้อมกันแล้ว reveal) — ยังไม่ทำ, เก็บไว้ Phase 2
 
-* การ์ดร้าน: รูป, ชื่อ, rating + จำนวนรีวิว, ระดับราคา (฿–฿฿฿฿), ระยะทาง, ประเภท
-* progress เล็กๆ ของแต่ละคน (เช่น "เพื่อน 2/4 คนปัดถึงใบ 7 แล้ว") — สร้าง social pressure แบบสนุก
-* live ticker: "🔥 2 คนชอบร้านนี้ตรงกัน!" (near-match teaser, ไม่บอกว่าใคร)
+### 2.5 Match Logic  ✅  *(as-built = Collect-all, ต่างจาก spec เดิมที่แนะนำ first-match-wins)*
 
-> ทางเลือก (ไม่ใช่ default): **lockstep mode** — ทุกคนดูใบเดียวกันพร้อมกัน, รอครบแล้ว reveal ("เกมโชว์ vibe"). สนุกแต่ช้าและพังง่ายเวลามีคนช้า/หลุด — แนะนำเก็บไว้ Phase 2 เป็น option
+**จบรอบเมื่อ voter ที่ยัง connected ทุกคนปัดครบ deck** (คนหลุดไม่บล็อก — ดู §2.7 #1) แล้ว compute ครั้งเดียว:
 
-### 2.5 Match Logic
+```
+1. rankDeck: ให้คะแนนทุกใบด้วยจำนวน like จาก voter ใน roster
+   เรียง: likes ↓ → likePct ↓ → deckIndex ↑
+2. ทุกใบ likes == 0  → status "no_match"  (โชว์หน้า no-match)
+3. มีใบเดียวที่คะแนนสูงสุด → declareWinner → status "matched"
+4. คะแนนสูงสุดเสมอกันหลายใบ → status "final_vote" (รอบโหวตตัดสิน)
+```
 
-**นิยาม match (default):** ร้านใบหนึ่งจะ match เมื่อ **voter ที่ยัง connected อยู่ทุกคน** ปัด like ใบนั้น
+**รอบโหวตตัดสิน (`final_vote`):** ✅
 
-* เริ่มจาก threshold = `voterCount` (จำนวนตอนล็อก roster)
-* ถ้ามีคนหลุด (ยืนยันแล้ว, ดู §2.7 #1) → threshold ลดเหลือเท่าคน connected → คนที่เหลืออาจ match ได้ทันทีถ้าทุกคนที่เหลือเคย like ใบนั้นไว้แล้ว
-* **policy การจบรอบ (เลือก 1 — เป็น open decision §6):**
-  * **A) First-match-wins** *(แนะนำ MVP)* — เจอ match แรก → จบรอบ → ฉลอง → after-match. ตรงกับ use case "เลิกเถียง ไปกินเลย"
-  * **B) Collect-all** — ปัดจนจบ deck แล้วโชว์ร้านที่ match ทั้งหมด เรียงตามคะแนน. ยืดหยุ่นกว่าแต่ช้ากว่า
+* `finalVote.options` = ร้านที่คะแนนตันเสมอกัน, แต่ละคนโหวตได้ 1 ร้าน (`votes/{uid}`)
+* resolve เมื่อ connected voter โหวตครบ → นับคะแนน (รวมโหวตของคนที่หลุดด้วย)
+  * ได้ผู้ชนะเดี่ยว → `declareWinner` → `matched`
+  * ยังเสมอ → เปิดรอบใหม่ (`round + 1`) ด้วยเฉพาะร้านที่เสมอ → วนจนเหลือ 1
+
+**Concurrency:** ทุก transition (`results`, `finalVote`, `match`) guard ด้วย **RTDB transaction** → client หลายเครื่องสังเกตเห็นการจบรอบพร้อมกันได้ แต่เขียนจริงได้คนเดียว (first-writer-wins) ดู §3.4
 
 ### 2.6 After-Match (เกิดอะไรหลังแมตช์)
 
-หน้า celebration → การ์ดร้านที่ชนะแบบเต็ม:
+**หน้าผลแบ่งตาม status:**
 
-* รูปใหญ่, ชื่อ, rating + จำนวนรีวิว, ระดับราคา, **เปิด/ปิดตอนนี้ + เวลาทำการ**, ที่อยู่, เบอร์โทร, website
-* **ปุ่มหลัก:**
-  * **"ไปกันเลย" → เปิด Google Maps directions** (deep link `https://www.google.com/maps/dir/?api=1&destination_place_id={placeId}`) — *ไม่เสียค่า API* เพราะเปิดแอป Maps ไม่ใช่เรียก API
-  * **โทร** (`tel:`), **ดูเมนู/เว็บ**, **แชร์ผลให้ห้อง**
-* "ใครชอบบ้าง" (avatars ของ likers)
-* ปุ่มรอง: **"หาร้านอื่นต่อ"** (ปัด deck ต่อ / โหลดร้านเพิ่ม), **"เริ่มรอบใหม่"**
-* (option) **vote ยืนยัน** — ทุกคนกด 👍 ก่อน lock จริง กันเคส "match เพราะเผลอปัด"
-* เก็บลง history (ถ้ามี account/persistence)
+* **`matched`** → results screen: การ์ดร้านที่ชนะ + อันดับร้านอื่น (`ถูกใจ X/N`) ✅
+* **`no_match`** → no-match screen: "ยังไม่มีร้านที่ทุกคนถูกใจตรงกัน" + ปุ่มสุ่มชุดใหม่/เริ่มใหม่ ✅
+* **`final_vote`** → final-vote screen: เลือกร้านที่เสมอ + progress "โหวตแล้ว X/N" ✅
+
+การ์ดร้านที่ชนะ: รูป, ชื่อ, rating + รีวิว, ราคา, **เปิด/ปิด + เวลาทำการ, ที่อยู่, เบอร์, website** (เติมจาก Place Details ตอนนี้ — §3.5) + avatars ของคนที่ถูกใจ
+
+* **ปุ่มหลัก — "นำทาง" → Google Maps directions** (deep link, ไม่เสียค่า API) ✅
+* ปุ่มรอง: โทร (`tel:`), เว็บ, **"สุ่มร้านชุดใหม่"** (= `restartRound`, สร้าง deck ใหม่ทั้งชุดด้วย roster เดิม), **"กลับหน้าหลัก"** ✅
+* ⏳ **vote ยืนยันก่อน lock** (กันเผลอปัด) — ยังไม่ทำ (`finalVote` เป็น tie-break คนละเรื่อง)
+* ⏳ เก็บลง history — ยังไม่ทำ (ดู §3.3 Firestore 💤)
 
 ### 2.7 Edge cases / เคสพังต่างๆ
 
-| #   | เคส | การจัดการ |
-|-----|-----|-----------|
-| 1   | **ผู้เล่นหลุดกลางเกม** | presence ผ่าน RTDB `onDisconnect`. มี **grace period \~20s** (กัน connection flap) ก่อนยืนยันว่าหลุด → ตัดออกจาก threshold. **like เดิมที่ปัดไว้ยังนับ** (ร้านที่ทุกคนรวมคนหลุด like ไว้ → ยัง match ได้) |
-| 2   | **กลับเข้ามาใหม่ (reconnect)** | อ่าน room state + deck + `progress/{uid}/cursor` → ปัดต่อจากเดิม. RTDB offline persistence คิว write ให้เอง |
-| 3   | **เข้าห้องหลังเริ่มแล้ว (late join)** | MVP: ปฏิเสธ "รอบนี้เริ่มแล้ว เริ่มรอบใหม่ได้เลย". Phase 2: เข้าเป็น spectator (like ไม่นับ) หรือ host เปิด lobby ใหม่ |
-| 4   | **ปัดจนจบ deck ไม่มี match** | fallback: โชว์ร้านเรียงตามจำนวน like (มากสุดก่อน) + "near match" (ทุกคน like ยกเว้น 1 คน) + ปุ่ม "ขยายรัศมี / โหลดร้านเพิ่ม / เริ่มใหม่" |
-| 5   | **Host ออกจากห้อง** | host สำคัญแค่ก่อนเริ่ม. ถ้าออกตอน lobby → migrate host ให้คนที่เข้าก่อน (transaction set `hostId`). หลังเริ่มแล้วห้อง self-driving ไม่ต้องมี host |
-| 6   | **เหลือคนเดียว / solo** | ต้อง ≥2 ถึงเริ่ม (group). **Solo mode** = feature แยก: ปัด like ใบแรก = "ไปกินเลย" (discovery ส่วนตัว) — ใส่ Phase 2 |
-| 7   | **โค้ดชนกัน** | ตอน generate ใช้ transaction เช็คกับห้อง active; ชน → สุ่มใหม่. ห้องมี TTL → recycle โค้ด |
-| 8   | **ห้องค้าง / ขยะ** | ทุกห้องมี `expiresAt` (เช่น 6–12 ชม.). Scheduled Cloud Function หรือ Firestore TTL ลบทิ้ง → คืนโค้ด + ลด storage |
-| 9   | **Places คืนร้านน้อย/ศูนย์** | พื้นที่ห่างไกล: auto-ขยายรัศมี → ผ่อนปรน filter → ถ้ายังน้อยกว่า deck ขั้นต่ำ (เช่น 8) แจ้ง user. ห้ามให้ deck ว่างจนเล่นไม่ได้ |
-| 10  | **ปฏิเสธ location** | fallback: พิมพ์ค้นหา/ปักหมุด (Geocoding) หรือ IP coarse location. อย่า hard-block |
-| 11  | **ปัดซ้ำ/รัวสองที** | write เป็น idempotent (`uid:true` set ซ้ำได้). lock การ์ดหลังปัด + debounce |
-| 12  | **match ชนกันสองใบพร้อมกัน (race)** | declare match ผ่าน **transaction** บน `match/` → first-writer-wins. (policy A: ใบแรกชนะ จบรอบ) |
-| 13  | **clock skew** | ใช้ `ServerValue.TIMESTAMP` เสมอ ไม่เชื่อ client clock สำหรับ ordering |
-| 14  | **Network partition** | ฟัง `.info/connected` → แสดง banner "กำลังเชื่อมต่อใหม่"; RTDB คิว write ตอน offline ให้ |
-| 15  | **บอท/สแปมสร้างห้อง (เผา quota)** | **App Check** (reCAPTCHA Enterprise) + rate-limit สร้างห้องต่อ uid/IP + billing alerts. นี่คือเกราะกัน Places cost runaway |
+| #   | เคส | สถานะ | การจัดการจริง |
+|-----|-----|:---:|-----------|
+| 1   | **ผู้เล่นหลุดกลางเกม** | ✅ | presence ผ่าน `onDisconnect`. **grace ~20s** (`DISCONNECT_GRACE_MS`) แล้ว re-read state สดอีกครั้ง → ตัดออกจาก threshold เฉพาะถ้ายังหลุดอยู่ (กัน flap + reconnect). **like เดิมยังนับ** ในการจัดอันดับ |
+| 2   | **กลับเข้ามาใหม่ (reconnect)** | 🟡 | resume จาก `progress/{uid}` cursor ✅ + RTDB offline persistence คิว write. *(ยังไม่มี reconnect banner — ดู #14)* |
+| 3   | **เข้าห้องหลังเริ่มแล้ว** | ✅ | ปฏิเสธ "รอบนี้เริ่มไปแล้ว". ⏳ spectator mode = Phase 2 |
+| 4   | **ปัดจนจบไม่มี match** | ✅ | status `no_match` + `results.ranking` (เรียงตาม like) โชว์บน no-match/results screen + ปุ่มสุ่มใหม่ |
+| 5   | **Host ออกจากห้อง** | ✅ | ตอน lobby → migrate `meta/hostId` ให้คนเข้าก่อนสุด (atomic). คนสุดท้ายออก → `remove` ทั้งห้อง (คืนโค้ด) |
+| 6   | **เหลือคนเดียว / solo** | ⏳ | บังคับ ≥2 ถึงเริ่ม. Solo discovery = Phase 2 |
+| 7   | **โค้ดชนกัน** | ✅ | probe `meta/status` ก่อน, ชน → สุ่มใหม่สูงสุด 12 ครั้ง |
+| 8   | **ห้องค้าง / ขยะ** | 🟡 | ทุกห้องมี `expiresAt` (12 ชม.) + **lazy expiry** ตอน join ✅. แต่ **scheduled cleanup function ยังไม่มี** ⏳ — ตอนนี้ห้องถูกลบเมื่อคนสุดท้ายออกเท่านั้น (ห้องที่ทุกคนปิดแท็บทิ้งค้างจน TTL แต่ไม่มีตัวลบ) |
+| 9   | **Places คืนร้านน้อย/ศูนย์** | ✅ | `buildDeck`: ขยายรัศมี ×2 สูงสุด 2 รอบ → ผ่อน cuisine filter → mock data เป็น last resort (ไม่ผสมกับ deck จริง) |
+| 10  | **ปฏิเสธ location** | ⏳ | ตอนนี้ต้องเปิดสิทธิ์ตำแหน่งก่อนสร้างห้อง (ปุ่มค้นหาย่าน = placeholder "ฟีเจอร์ในอนาคต"). manual Geocoding search เคยทำแล้วแต่ **ปิดกลับ** รอเปิดทีหลัง |
+| 11  | **ปัดซ้ำ/รัวสองที** | ✅ | write idempotent (`uid: ts` set ทับได้) + lock การ์ดหลังปัด |
+| 12  | **match race (สองใบพร้อมกัน)** | ✅ | declare ผ่าน **transaction** บน `match/` → first-writer-wins |
+| 13  | **clock skew** | ✅ | ใช้ `serverTimestamp()` สำหรับ ts ทั้งหมด |
+| 14  | **Network partition** | 🟡 | RTDB คิว write ตอน offline ให้เอง ✅. แต่ **ยังไม่ฟัง `.info/connected`** → ไม่มี banner "กำลังเชื่อมต่อใหม่" ⏳ |
+| 15  | **บอท/สแปมเผา quota** | 🟡 | **App Check (reCAPTCHA v3) wired** แต่ no-op จนกว่าจะตั้ง `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` 💤. **ยังไม่มี rate-limit** ต่อ uid/IP ⏳. ต้องตั้ง billing alerts เองใน GCP |
 
 
 ---
@@ -145,23 +166,23 @@ UI ระหว่างปัด:
 
 ```mermaid
 flowchart TB
-    subgraph Client["📱 Client — Next.js + Tailwind (PWA, mobile-first)"]
+    subgraph Client["📱 Client — Next.js + Tailwind (mobile-first)"]
         UI[Swipe UI / Lobby]
         FSDK[Firebase Web SDK<br/>Auth + RTDB listeners]
-        AC[App Check]
+        AC["App Check 💤 (off by default)"]
     end
 
     subgraph Backend["Next.js Route Handlers (server) — Places proxy"]
-        PX["/api/places/nearby<br/>/api/places/photo"]
-        CACHE{{Cache check}}
+        PX["/api/places/nearby · photo<br/>details · geocode"]
+        CACHE{{"in-memory Map cache<br/>(per instance)"}}
     end
 
     subgraph Firebase["Firebase"]
         AUTH[Anonymous Auth]
         RTDB[(Realtime Database<br/>live game state)]
-        FS[(Firestore<br/>history + places cache)]
-        STORE[(Storage<br/>cached photos)]
-        FN[Cloud Functions<br/>cleanup / optional match backstop]
+        FS[("Firestore 💤<br/>configured, unused")]
+        STORE[("Storage ⏳<br/>not wired")]
+        FN["Cloud Functions ⏳<br/>cleanup — not deployed"]
     end
 
     GOOG[(Google Places API New)]
@@ -170,19 +191,14 @@ flowchart TB
     FSDK <-->|websocket realtime| RTDB
     FSDK --> AUTH
     AC -.verifies.-> PX
-    AC -.verifies.-> RTDB
-    UI -->|create deck / photos| PX
+    UI -->|create deck / photos / details| PX
     PX --> CACHE
     CACHE -->|miss| GOOG
-    CACHE <-->|read/write| FS
-    PX --> STORE
-    FN -->|scheduled| RTDB
-    FS -.match records.- FSDK
 ```
 
-**จุดสำคัญ:** realtime ไม่ต้องเขียน WebSocket server เอง — client subscribe RTDB ตรงๆ Firebase จัดการ transport + presence ให้. server (Next.js Route Handler) ทำหน้าที่เดียวคือ **proxy + cache ของ Places** เพื่อซ่อน API key และคุมต้นทุน
+**จุดสำคัญ:** realtime ไม่ต้องเขียน WebSocket server เอง — client subscribe RTDB ตรงๆ Firebase จัดการ transport + presence ให้. server (Next.js Route Handler) ทำหน้าที่ **proxy + cache ของ Places** เพื่อซ่อน API key และคุมต้นทุน
 
-**Hosting:** Next.js บน Vercel หรือ Firebase Hosting ก็ได้ (Route Handlers = serverless). Cloud Functions ใช้แค่ scheduled cleanup + (optional) match backstop
+> **สถานะ infra:** RTDB + Anonymous Auth = ใช้งานจริง. Firestore init ไว้ (`firebase.ts`) แต่ **ไม่มีโค้ดเรียกใช้** 💤. Storage/Cloud Functions ยังไม่ wired ⏳. cache เป็น in-memory Map ต่อ serverless instance (หายเมื่อ scale/redeploy)
 
 ### 3.2 ทำไม RTDB ไม่ใช่ Firestore สำหรับ live game
 
@@ -190,203 +206,199 @@ flowchart TB
 |-----|--------------------------------|-----------------------------|
 | latency การ sync ถี่ๆ | ต่ำมาก เหมาะ swipe/presence    | สูงกว่า                     |
 | presence (`onDisconnect`) | built-in                       | ต้อง workaround             |
-| billing | คิดตาม GB stored/downloaded — ถูกสำหรับ write เล็กๆ จำนวนมาก | คิดต่อ document op — like/swipe รัวๆ แพงเร็ว |
+| billing | คิดตาม GB — ถูกสำหรับ write เล็กๆ จำนวนมาก | คิดต่อ document op — swipe รัวๆ แพงเร็ว |
 | query ซับซ้อน | จำกัด                          | เก่ง                        |
 
-→ **ใช้ RTDB** สำหรับ rooms/likes/presence (ephemeral), **Firestore** สำหรับ match history + places cache (durable). อย่าเอา swipe ทุกครั้งไปลง Firestore
+→ ใช้ **RTDB** สำหรับ rooms/likes/presence (ephemeral) ทั้งหมด. Firestore *ตั้งใจไว้* สำหรับ match history + places cache (durable) แต่ **ยังไม่ได้ wire** — ดู §3.3
 
 ### 3.3 Data Model
 
-**RTDB (live, ephemeral):**
+**RTDB (live, ephemeral) — as-built:** ✅
 
 ```
 rooms/{code}
   meta/
-    status:      "lobby" | "active" | "matched" | "ended"
+    status:      "lobby" | "active" | "final_vote" | "no_match" | "matched" | "ended"*
     hostId:      uid
-    createdAt:   ts
-    expiresAt:   ts
-    location:    { lat, lng, label }
-    settings:    { radiusM, priceLevels:[1..4], openNow:bool, cuisine:[..] }
+    createdAt:   ts          (serverTimestamp)
+    expiresAt:   ts          (createdAt + 12h)
+    voterCount:  N           (0 ใน lobby)
+    deckSize:    int         (0 ใน lobby)
+    filters/     { lat, lng, label?, radiusKm, priceMin, priceMax, openNow, cuisines[] }
     roster/      { {uid}: true }     # voters ที่ล็อกตอนเริ่ม (immutable)
-    voterCount:  N
-    deckSize:    int
   participants/{uid}/
-    name, avatar, joinedAt, ready:bool, connected:bool   # connected via onDisconnect
-  deck/{index}/            # set ครั้งเดียวตอนเริ่ม, immutable
-    placeId, name, photoUrl, rating, userRatingCount,
-    priceLevel, distanceM, types, mapsUrl
-  likes/{placeId}/{uid}:  ts        # บันทึกเฉพาะ like (pass ไม่ต้องเก็บใน MVP)
-  progress/{uid}/cursor:  index     # ปัดถึงไหน (resume)
-  match/                            # set ครั้งเดียว, first-writer-wins
-    placeId, at, likers/{uid}: true
+    name, emoji, host:bool, joinedAt, ready:bool, connected:bool   # connected via onDisconnect
+  deck/{index}/            # set ครั้งเดียวตอนเริ่ม, immutable. Restaurant snapshot:
+    id, name, cuisine, rating, reviews, price(1-4), dist, open, hours,
+    addr, phone, tags[], emoji, g[from,to], placeId?, primaryType?,
+    placeTypes[]?, lat?, lng?, photoName?, website?
+  likes/{restaurantId}/{uid}:    ts        # like
+  dislikes/{restaurantId}/{uid}: ts        # pass (เก็บด้วย — ต่างจาก spec เดิม)
+  progress/{uid}:  cursor       # ปัดถึงไหน (resume)
+  results/                      # collect-all ranking, transaction-guarded
+    computedAt, noMatch:bool,
+    ranking/{i}/ { restaurantId, rank, deckIndex, likes, voterCount, likePct }
+  finalVote/                    # รอบโหวตตัดสิน, transaction-guarded
+    round, createdAt, options/{restaurantId}:true, votes/{uid}:restaurantId,
+    resolved/ { winnerId, at }
+  match/                        # set ครั้งเดียว, first-writer-wins
+    restaurantId, at, likers/{uid}:true
 ```
 
-**Firestore (durable):**
+> *`"ended"` อยู่ใน type union แต่ยังไม่มีโค้ด set ค่านี้ (reserved)
+
+**Firestore (durable) — 💤 ตั้งใจไว้ ยังไม่ wire:**
 
 ```
-matches/{matchId}     { code, place{snapshot}, participants[], at }
-placesCache/{key}     { results[], fetchedAt, expiresAt }   # key = geohash:radius:filters
-users/{uid}/history/  (Phase 1+)
+matches/{matchId}     { code, place{snapshot}, participants[], at }   ⏳
+placesCache/{key}     { results[], fetchedAt, expiresAt }            ⏳ (ตอนนี้เป็น in-memory)
+users/{uid}/history/  (Phase 1+)                                      ⏳
 ```
 
-**Storage:** `photos/{photoRefHash}.jpg` — รูปที่ resolve แล้ว, serve ผ่าน CDN, reuse ข้ามห้อง/ข้ามคน
+**Storage:** `photos/{photoRefHash}.jpg` — ⏳ ยังไม่ทำ. ตอนนี้ `/api/places/photo` resolve photoUri จาก Google แล้วพึ่ง browser `Cache-Control` (1 วัน) แทน
 
-### 3.4 Match Detection Algorithm
-
-ปัญหาคลาสสิก: ต้องรู้ว่า "ทุกคน like ใบเดียวกัน" แบบ atomic ไม่ double-declare และทนคน crash
+### 3.4 Match Detection / Round Completion  ✅
 
 ```mermaid
 sequenceDiagram
-    participant U as User ปัด like ใบ X
+    participant U as Users ปัด deck
     participant DB as RTDB
-    participant All as ทุก client (listeners)
+    participant All as ทุก client (subscribeToRoom)
 
-    U->>DB: set likes/X/{uid} = ts  (idempotent)
-    DB-->>All: likes/X เปลี่ยน (broadcast)
-    Note over All: ทุก client recompute:<br/>likers(X) ⊇ connected voters ?
-    All->>DB: ถ้าครบ → transaction set match/ (ถ้ายังว่าง)
-    Note over DB: transaction → มีแค่ client เดียวที่ชนะ
-    DB-->>All: match/ ถูก set
-    All->>All: เด้งเข้า after-match พร้อมกัน
+    U->>DB: set likes|dislikes/X/{uid} + progress/{uid}
+    DB-->>All: state เปลี่ยน (broadcast)
+    Note over All: เช็ค deckRoundComplete?<br/>(connected voters ปัดครบทุกคน)
+    All->>All: ทุกคนครบ → completeDeckResults<br/>มีคนหลุด → รอ grace 20s แล้ว re-check
+    All->>DB: transaction set results/ (ถ้ายังว่าง)
+    Note over DB: 1 client ชนะ → จัดอันดับ
+    alt ใบเดียวสูงสุด
+        DB->>DB: transaction match/ → status matched
+    else เสมอ
+        DB->>DB: status final_vote → โหวต → resolveFinalVote
+    else ทุกใบ 0 like
+        DB->>DB: status no_match
+    end
+    DB-->>All: เด้งเข้าหน้าผลพร้อมกัน
 ```
 
 ทำไม robust:
 
-* ทุก client subscribe `likes/` → ใครก็ตามที่เห็นว่าครบ จะลอง declare → **ไม่พึ่งคนสุดท้ายที่ปัด** (ถ้าคนนั้น crash คนอื่นก็เห็น like ที่ทำให้ครบอยู่ดี)
-* declare ผ่าน transaction บน `match/` → set ได้ครั้งเดียว, กัน race ใบสองใบชนกัน
-* threshold ใช้ "connected voters" → คนหลุดแล้ว match ที่เหลือยังเดินต่อได้
+* ทุก client subscribe room → ใครเห็นว่ารอบจบก็ลอง advance ได้ → **ไม่พึ่งคนสุดท้ายที่ปัด** (คนนั้น crash คนอื่นก็เห็น state ที่ครบอยู่ดี)
+* transition ทั้งหมด (`results` / `finalVote` / `match`) ผ่าน **transaction** → เขียนได้ครั้งเดียว กัน double-advance
+* threshold ใช้ "connected voters"; คนหลุดผ่าน grace 20s + fresh re-check ก่อนถูกตัด (กัน flap/reconnect)
 
-> **Optional hardening (Phase 2):** Cloud Function trigger บน `likes/{placeId}` เช็ค completeness ฝั่ง server แล้วเขียน `match/` — authoritative สุด แต่มี cold-start latency + cost. MVP ใช้ client-side detection พอ
+> ⏳ **Optional hardening (Phase 2):** Cloud Function เป็น server-side backstop. ตอนนี้ใช้ client-side detection ล้วน
 
-### 3.5 Places API Integration (New API + field mask)
+### 3.5 Places API Integration (New API + field mask)  ✅
 
 * ทุก call ผ่าน **server (Next.js Route Handler)** เท่านั้น — key ไม่โผล่ฝั่ง client
-* ใช้ **Places API (New)** + `FieldMask` header (เลือกเฉพาะ field ที่ใช้ = คุม SKU/ราคา ดู §4)
-* **สร้าง deck = Nearby Search 1 ครั้ง/ห้อง** → ได้ \~20 ร้านพร้อม field ที่ต้องการครบ → **ไม่ต้องยิง Place Details รายร้าน** (นี่คือกุญแจคุมต้นทุน)
-* **รูป**: Nearby Search คืน photo *reference* ไม่ใช่ตัวรูป → resolve ผ่าน Place Photo endpoint (เสียเงินต่อ request) → **cache ลง Storage** แล้ว reuse. lazy-load เฉพาะรูปการ์ดที่ใกล้ถึง (ไม่ preload ครบ 20 ใบ)
-* **cache Nearby Search** ใน Firestore key = `geohash:radius:filters`, TTL \~2–6 ชม. → ห้องในย่านเดียวกันใช้ผลร่วมกัน
+* 3 routes: **`/nearby`** (สร้าง deck), **`/photo`** (resolve รูป), **`/details`** (เติมข้อมูลร้านที่ชนะ). ⏳ `/geocode` (manual location search) ปิดไว้ก่อน
+* ใช้ **Places API (New)** + `FieldMask` — route project response ลงเหลือ field ที่ใช้ (คุม SKU/ราคา §4)
+* **สร้าง deck = Nearby Search 1 ครั้ง/ห้อง** → ~20 ร้านพร้อม field ครบ → ไม่ยิง Place Details รายร้านตอนสร้าง deck (กุญแจคุมต้นทุน)
+* **รูป**: Nearby คืน photo *resource name* → resolve ผ่าน `/photo` (lazy, เฉพาะใบที่ใกล้เห็น), gradient เป็น fallback
+* **Place Details** เรียก *เฉพาะ* ร้านที่ชนะ (after-match) เพื่อเติม phone/website/hours/addr/open
+* **cache: in-memory `Map` ต่อ route** 🟡 — nearby round center ~110m ให้ห้องย่านเดียวกัน reuse; photo พึ่ง browser Cache-Control. ⏳ **durable cache (Firestore geohash + Storage) ยังไม่ทำ** → cache หายเมื่อ instance รีไซเคิล/scale
 
 ### 3.6 Security
 
-* **API key** อยู่ server-side เท่านั้น, restrict by API + IP
-* **App Check** (reCAPTCHA Enterprise) คุมทั้ง backend + RTDB → กันบอทยิงเผา quota
-* **Anonymous Auth** ให้ทุกคนมี uid
-* **Security Rules (RTDB):**
-  * อ่าน/เขียนห้องได้เฉพาะสมาชิกห้อง
-  * เขียน `likes/{placeId}/{uid}` ได้เฉพาะ `uid == auth.uid` (ปลอม like คนอื่นไม่ได้)
-  * `deck/` เขียนได้ครั้งเดียวตอนเริ่ม (ห้ามแก้)
-  * `match/` validate ผ่าน rule + transaction
+* ✅ **API key** server-side เท่านั้น (`GOOGLE_PLACES_API_KEY`), แยกจาก client key
+* 🟡 **App Check** (reCAPTCHA v3) wired ใน `firebase.ts` แต่ **no-op จนกว่าจะตั้ง `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`** + ยังไม่ได้ enforce ฝั่ง RTDB/proxy
+* ✅ **Anonymous Auth** ทุกคนมี uid
+* ✅ **Security Rules (RTDB)** — `database.rules.json`:
+  * อ่านห้องได้เฉพาะสมาชิก (participant); `meta/status` + `meta/expiresAt` อ่านได้ด้วย auth (สำหรับ create/join probe)
+  * เขียน `likes|dislikes|progress/{...}/{uid}` ได้เฉพาะ `uid == auth.uid` + status `active`; โหวต `finalVote/votes/{uid}` เฉพาะ status `final_vote`
+  * `deck/` เขียนได้เฉพาะ host; `results`/`match` validate + รับ set ครั้งเดียว
+  * host migration ผ่าน `meta/hostId` (validate ว่าเป็นสมาชิก)
+* ⏳ rate-limit สร้างห้องต่อ uid/IP, billing alerts — ต้องทำ/ตั้งเพิ่ม
 
 ### 3.7 Realtime / Presence detail
 
-* `participants/{uid}/connected = true` ตอน connect, set `onDisconnect(...).set(false)` → หลุดเน็ตปุ๊บ flag เป็น false อัตโนมัติ
-* ฟัง `.info/connected` ฝั่ง client แสดงสถานะการเชื่อมต่อ
-* grace period 20s ก่อนตัดออกจาก threshold (กัน flap)
+* ✅ `participants/{uid}/connected = true` ตอน connect + `onDisconnect(...).set(false)` → หลุดเน็ตปุ๊บ flag เป็น false. cleanup ตอน leave = cancel handler เฉยๆ (ไม่ resurrect node)
+* ✅ grace 20s + re-read state สดก่อนตัด voter ออกจาก threshold (กัน flap)
+* ⏳ ฟัง `.info/connected` แสดง banner เชื่อมต่อใหม่ — ยังไม่ทำ
 
 ### 3.8 Scaling notes
 
-* โค้ด 4 หลัก = 10,000 ห้อง active พร้อมกัน. พอสำหรับ MVP. ถ้าโต → ย้ายเป็น 5–6 base32 chars (ไม่เอาตัวสับสน 0/O, 1/I/L) ได้ \~33M+ combinations, แก้แค่ generator + validation
-* RTDB sharding ไม่จำเป็นจนกว่าจะ concurrent สูงมาก (Spark = 100 concurrent connections; Blaze ไม่จำกัดแต่มี soft limit \~200k ต่อ instance)
+* ✅ โค้ด **base32 4 ตัว** (no 0/O/1/I/L) ≈ 1.05M combinations — เกินพอสำหรับ MVP. โตขึ้นเพิ่มเป็น 5–6 ตัวได้ที่ generator/validation
+* RTDB sharding ไม่จำเป็นจนกว่า concurrent สูงมาก (Spark = 100 concurrent; Blaze soft limit ~200k/instance)
 
 
 ---
 
 ## 4. ต้นทุน Google Places API
 
-> อ้างอิงราคา Google Maps Platform ที่ Google เผยแพร่ ณ พ.ค. 2026 (อัปเดตล่าสุดในหน้า pricing 2026-05-27). หน่วย: ราคาต่อ 1,000 events, tier แรก (หลัง free cap จนถึง 100,000/เดือน)
+> อ้างอิงราคา Google Maps Platform ณ พ.ค. 2026. หน่วย: ราคาต่อ 1,000 events, tier แรก (หลัง free cap จนถึง 100,000/เดือน)
 
-### 4.1 การเปลี่ยนแปลงสำคัญที่ต้องรู้ก่อน
+### 4.1 การเปลี่ยนแปลงสำคัญที่ต้องรู้
 
-ตั้งแต่ **1 มี.ค. 2025** Google เลิกเครดิตรวม $200/เดือนแบบเดิม เปลี่ยนเป็น:
+ตั้งแต่ **1 มี.ค. 2025** Google เลิกเครดิตรวม $200/เดือน เปลี่ยนเป็น:
 
-* **free cap แยกต่อ SKU ต่อเดือน** (reset ทุกเดือน) — ไม่ pool รวมกันแล้ว
+* **free cap แยกต่อ SKU ต่อเดือน** (ไม่ pool รวม)
 * จัด SKU เป็น 3 ระดับ: **Essentials / Pro / Enterprise**
 * account ใหม่ได้ **เครดิตทดลอง $300** (90 วัน)
-* **Firebase ต้องใช้ Blaze plan** (เพราะ Cloud Functions / การยิง external API จาก server ต้องการ Blaze; Blaze ยังรวม free tier เดิมไว้ จ่ายเฉพาะส่วนเกิน)
+* **Firebase ต้องใช้ Blaze plan** (ยิง external API จาก server ต้องการ Blaze; Blaze รวม free tier เดิมไว้)
 
 ### 4.2 SKU ที่แอปนี้ใช้
 
 | SKU | Free cap/เดือน | ราคา/1,000 | ใช้ตรงไหน |
 |-----|----------------|------------|-----------|
-| **Nearby Search Pro** | 5,000          | $32        | สร้าง deck (ถ้า field มีแค่ ชื่อ/รูป/location/types) |
-| **Nearby Search Enterprise** | 1,000          | $35        | สร้าง deck (ถ้าเพิ่ม `rating`, `priceLevel`) |
-| **Nearby Search Enterprise + Atmosphere** | 1,000          | $40        | สร้าง deck (ถ้าเพิ่ม `openingHours`/reviews) |
-| **Place Details Photos** | 1,000          | $7         | ดึงรูปแต่ละใบ |
-| **Place Details Enterprise + Atmosphere** | 1,000          | $25        | (option) ข้อมูลเต็มร้านที่ match |
-| **Geocoding** | 10,000         | $5         | fallback ตอนพิมพ์หา location |
+| **Nearby Search Enterprise** | 1,000          | $35        | สร้าง deck (มี `rating`, `priceLevel`) |
+| **Place Details Photos** | 1,000          | $7         | `/photo` ดึงรูปแต่ละใบ |
+| **Place Details Enterprise + Atmosphere** | 1,000          | $25        | `/details` ข้อมูลเต็มร้านที่ชนะ |
+| **Geocoding** ⏳ | 10,000         | $5         | (เผื่ออนาคต) `/geocode` fallback ตอนพิมพ์หา location — ปิดไว้ |
 
-> SKU ที่ถูกเรียกเก็บ = **tier สูงสุดที่ field mask แตะ**. ถ้า field mask ของ Nearby Search มี `rating`/`priceLevel` → โดน Enterprise; ถ้ามี opening hours → Enterprise+Atmosphere. ฉะนั้น **field mask = คันโยกราคาหลัก**
+> SKU ที่ถูกเรียกเก็บ = **tier สูงสุดที่ field mask แตะ** → **field mask = คันโยกราคาหลัก**
 
 ### 4.3 ต้นทุนต่อห้อง (deck 20 ใบ)
 
 | รายการ | จำนวน/ห้อง | คิดเป็น |
 |--------|------------|---------|
-| Nearby Search (Enterprise, มี rating+price) | 1 call     | \~$0.035 |
-| Place Photos (20 ใบ, **ถ้าไม่ cache**) | 20         | \~$0.14 |
-| Place Photos (cache \~50% / lazy-load) | \~10       | \~$0.07 |
-| Place Details หลัง match | 0–1        | \~$0 (ใช้ data จาก deck ได้เลย) |
+| Nearby Search (Enterprise) | 1 call     | ~$0.035 |
+| Place Photos (lazy, **in-memory/browser cache เท่านั้น**) | ~10–20 | ~$0.07–0.14 |
+| Place Details (ร้านที่ชนะ) | 0–1        | ~$0.025 |
 
-→ **\~$0.04 (ไม่นับรูป) ถึง \~$0.18/ห้อง (รูปไม่ cache เต็มที่)**. **รูปคือตัวแพงสุด** ไม่ใช่ search
+→ ~$0.04–0.18/ห้อง. **รูปคือตัวแพงสุด** — และเพราะ **ยังไม่มี Storage cache แบบ durable** ต้นทุนรูปจริงจะเกาะค่าสูงของช่วงนี้ (cache หายเมื่อ instance รีไซเคิล)
 
-### 4.4 ประมาณการรายเดือน
+### 4.4 คันโยกลดต้นทุน (เรียงตามผลกระทบ)
 
-สมมติ Nearby Search ใช้ tier Enterprise, photo cache hit \~50% (≈10 รูป billed/ห้อง):
-
-| ปริมาณ | Search | Photos | รวมโดยประมาณ |
-|--------|--------|--------|--------------|
-| **1,000 ห้อง/เดือน** | 1,000 calls → ฟรี (≤ cap 1,000) ≈ $0 | 10,000 req → (10,000−1,000)/1,000 × $7 = **$63** | **\~$63/เดือน** |
-| 1,000 ห้อง, **รูปไม่ cache** (20/ห้อง) | \~$0   | 20,000 → \~**$133** | \~$133/เดือน |
-| **10,000 ห้อง/เดือน** | (10,000−1,000)×$35/1,000 = **$315** | 100,000 → (100,000−1,000)×$7/1,000 = **$693** | **\~$1,000/เดือน** |
-
-ที่ scale ใหญ่ **รูปยังครองค่าใช้จ่าย** → caching คือ lever ที่คุ้มสุด
-
-### 4.5 คันโยกลดต้นทุน (เรียงตามผลกระทบ)
-
-
-1. **Cache รูปลง Storage/CDN + lazy-load** เฉพาะการ์ดที่กำลังจะเห็น (ไม่ preload 20 ใบ) — ลดได้มากสุด
-2. **Cache Nearby Search** ตาม geohash+radius (\~ชม.) — ห้องในย่านเดียวกัน reuse
-3. **Deck เล็กลง** (12–15 ใบ แทน 20) — ลดทั้ง search overhead และรูป
-4. **เลือก tier ให้พอดี** — ถ้าไม่จำเป็นต้องโชว์ rating/price บนการ์ด ใช้ Pro ($32, free 5,000) แทน Enterprise (free แค่ 1,000)
-5. **App Check + rate limit** — กันบอทเผา quota (ทั้ง security ทั้ง cost)
-6. **ตั้ง billing alerts + quota caps** ใน Google Cloud — กันบิลพุ่งไม่รู้ตัว (ของ Places ไม่มี hard cap ในตัว ต้องตั้งเอง)
-
-### 4.6 Firebase cost
-
-สำหรับ scale MVP **อยู่ใน free tier สบายๆ** — game state เป็น KB ต่อห้อง. ต้องเปิด **Blaze** (เพื่อ external API/functions) แต่ Blaze รวม free allowance เดิมไว้ จ่ายเฉพาะส่วนเกิน ซึ่งสำหรับข้อมูลเล็กๆ แบบนี้แทบเป็นศูนย์เทียบกับ Places. *(อัตรา Firebase ละเอียดควรเช็คหน้า pricing ปัจจุบันก่อนวางแผนจริง)*
+1. ⏳ **Cache รูปลง Storage/CDN** (ตอนนี้แค่ in-memory + browser) — lever ที่คุ้มสุด ยังไม่ทำ
+2. 🟡 **Cache Nearby Search** — มี in-memory per-instance แล้ว, ยกระดับเป็น Firestore geohash จะ reuse ข้าม instance
+3. **Deck เล็กลง** (12–15 ใบ) — ปรับ `DECK_SIZE`
+4. **เลือก tier ให้พอดี** — ถ้าไม่โชว์ rating/price ใช้ Pro ($32, free 5,000) แทน Enterprise
+5. ⏳ **App Check + rate limit** — กันบอทเผา quota
+6. **billing alerts + quota caps** ใน GCP — Places ไม่มี hard cap ในตัว ต้องตั้งเอง
 
 
 ---
 
-## 5. MVP scope & phasing
+## 5. สถานะ MVP & phasing
 
 **Phase 0 — MVP (เล่นจบ loop ได้):**
 
-* Anonymous Auth + ชื่อ/avatar
-* สร้าง/เข้าห้อง (โค้ด 4 หลัก + ลิงก์) + lobby + presence
-* location (geolocation + manual fallback)
-* deck เดียวจาก Nearby Search 1 call + field mask
-* ปัดอิสระ shared deck + unanimous match (first-match-wins)
-* after-match: การ์ดเต็ม + ปุ่มไป Google Maps + โทร/แชร์
-* room TTL + cleanup, Places proxy + cache, App Check, security rules, billing alerts
+* ✅ Anonymous Auth + ชื่อ/avatar
+* ✅ สร้าง/เข้าห้อง (base32 4 ตัว + ลิงก์) + lobby + presence
+* 🟡 location: geolocation ✅ · manual Geocoding fallback ⏳ (ปิดไว้ก่อน)
+* ✅ deck จาก Nearby Search 1 call + field mask
+* ✅ ปัดอิสระ shared deck + **collect-all ranking + tie-break vote + no-match** *(ไม่ใช่ first-match-wins)*
+* ✅ after-match: การ์ดเต็ม + Google Maps + โทร/เว็บ
+* ✅ room TTL + lazy expiry, Places proxy + (in-memory) cache, security rules
+* 🟡 App Check (off by default), 💤 billing alerts (ต้องตั้งเอง)
+* ⏳ scheduled cleanup function
 
-**Phase 1:** filters (ราคา/ประเภท/เปิดตอนนี้), reconnect/resume, host migration, no-match fallback (เรียง like + near-match), photo cache เต็มรูปแบบ, match history
+**Phase 1:** ✅ filters · 🟡 reconnect/resume (มี cursor, ไม่มี banner) · ✅ host migration · ✅ no-match fallback · ⏳ durable photo cache · ⏳ match history
 
-**Phase 2:** vote ยืนยันก่อน lock, reactions, "โหลดร้านเพิ่ม"/pagination, solo mode, lockstep mode (option), share results, analytics, Cloud Function match backstop
+**Phase 2:** ⏳ vote ยืนยันก่อน lock · ⏳ reactions · ⏳ "โหลดร้านเพิ่ม"/pagination *(ตอนนี้ "สุ่มชุดใหม่" = deck ใหม่ทั้งชุด)* · ⏳ solo mode · ⏳ lockstep mode · ⏳ share results · ⏳ analytics · ⏳ Cloud Function match backstop · ⏳ spectator (late-join)
 
-**Phase 3:** account/social, favorites, group history, web push, (พิจารณา) monetization
+**Phase 3:** ⏳ account/social, favorites, group history, web push, monetization
 
 
 ---
 
-## 6. Open decisions (ต้องเคาะ)
+## 6. Open decisions — สถานะการเคาะ
 
-
-1. **จบรอบยังไง** — first-match-wins (เร็ว, ตรง use case) vs collect-all-and-rank (ตัวเลือกเยอะ)?  → แนะนำ first-match-wins ใน MVP
-2. **Roster** — ล็อกตอนเริ่ม (แนะนำ) vs ปรับ dynamic ระหว่างเล่น?
-3. **คนหลุด** — ลด threshold (แนะนำ) vs บล็อก match จนกว่าจะกลับมา?
-4. **Deck source** — Nearby Search ครั้งเดียว \~20 (ถูก) vs paginate เพิ่มความหลากหลาย (แพงขึ้น)?
-5. **Field/tier** — Enterprise+Atmosphere (มีเวลาทำการบนการ์ด, $40, free 1,000) vs Pro (ไม่มี rating/price บนการ์ด, $32, free 5,000)?
-6. **Solo mode** — ทำใน MVP หรือเลื่อนไป Phase 2?
-
-
+1. **จบรอบยังไง** — ✅ **เคาะแล้ว: collect-all + จัดอันดับ + โหวตตัดสิน** (ไม่ใช่ first-match-wins ตามที่ spec เดิมแนะนำ)
+2. **Roster** — ✅ ล็อกตอนเริ่ม
+3. **คนหลุด** — ✅ ลด threshold (connected voters) + grace 20s
+4. **Deck source** — ✅ Nearby Search ครั้งเดียว ~20 (+ widen/relax เมื่อ sparse). ⏳ pagination = Phase 2
+5. **Field/tier** — ✅ Enterprise (มี rating/price บนการ์ด). ปรับเป็น Pro ได้ถ้าตัด rating/price
+6. **Solo mode** — ⏳ เลื่อนไป Phase 2 (บังคับ ≥2)

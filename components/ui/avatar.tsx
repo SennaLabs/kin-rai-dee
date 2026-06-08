@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { avatars } from "@/assets/avatars";
 import type { Player } from "@/lib/types";
 
@@ -50,11 +51,13 @@ export function Avatar({ p, size = 40, dim, ring, check, joinPop }: AvatarProps)
           transition: "opacity .3s",
         }}
       >
-        {AvatarSvg ? (
-          <AvatarSvg width={size} height={size} style={{ display: "block" }} />
-        ) : (
-          p.emoji
-        )}
+        {AvatarSvg
+          ? createElement(AvatarSvg, {
+              width: size,
+              height: size,
+              style: { display: "block" },
+            })
+          : p.emoji}
       </div>
       {/* presence dot */}
       <span
