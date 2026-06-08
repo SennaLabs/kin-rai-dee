@@ -2,10 +2,12 @@
 
 import { useState, type CSSProperties } from "react";
 import type { Restaurant } from "@/lib/types";
+import { cn } from "@/lib/utils/cn";
 
 type FoodPhotoProps = {
   r: Restaurant;
   style?: CSSProperties;
+  className?: string;
   /** show the "photo · cuisine" caption (placeholder mode only) */
   label?: boolean;
   /** larger emoji for hero/card usage */
@@ -18,7 +20,7 @@ type FoodPhotoProps = {
  * warm gradient + cuisine emoji is the skeleton/fallback shown until the image
  * loads, or permanently when there's no photo or it fails.
  */
-export function FoodPhoto({ r, style, label = true, big }: FoodPhotoProps) {
+export function FoodPhoto({ r, style, className, label = true, big }: FoodPhotoProps) {
   const [failed, setFailed] = useState(false);
   const showPhoto = Boolean(r.photoName) && !failed;
   // Hero/card usages render large; reel/thumb usages render small.
@@ -26,20 +28,12 @@ export function FoodPhoto({ r, style, label = true, big }: FoodPhotoProps) {
 
   return (
     <div
-      style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
-        background: `linear-gradient(150deg, ${r.g[0]}, ${r.g[1]})`,
-        overflow: "hidden",
-        ...style,
-      }}
+      className={cn("relative w-full h-full overflow-hidden", className)}
+      style={{ background: `linear-gradient(150deg, ${r.g[0]}, ${r.g[1]})`, ...style }}
     >
       <div
+        className="absolute inset-0 opacity-50"
         style={{
-          position: "absolute",
-          inset: 0,
-          opacity: 0.5,
           backgroundImage:
             "repeating-linear-gradient(135deg, rgba(255,255,255,0.10) 0 14px, rgba(255,255,255,0) 14px 28px)",
         }}
@@ -53,49 +47,23 @@ export function FoodPhoto({ r, style, label = true, big }: FoodPhotoProps) {
           loading="lazy"
           decoding="async"
           onError={() => setFailed(true)}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
+          className="absolute inset-0 w-full h-full object-cover"
         />
       )}
 
       {!showPhoto && (
         <div
-          style={{
-            position: "absolute",
-            left: "50%",
-            top: "46%",
-            transform: "translate(-50%,-50%)",
-            fontSize: big ? 96 : 72,
-            filter: "drop-shadow(0 8px 14px rgba(0,0,0,0.22))",
-          }}
+          className={cn(
+            "absolute left-1/2 top-[46%] -translate-x-1/2 -translate-y-1/2 drop-shadow-[0_8px_14px_rgba(0,0,0,0.22)]",
+            big ? "text-[96px]" : "text-[72px]"
+          )}
         >
           {r.emoji}
         </div>
       )}
 
       {!showPhoto && label && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: 10,
-            left: "50%",
-            transform: "translateX(-50%)",
-            fontFamily: "ui-monospace, Menlo, monospace",
-            fontSize: 10,
-            letterSpacing: 0.5,
-            color: "rgba(255,255,255,0.82)",
-            textTransform: "uppercase",
-            background: "rgba(43,27,23,0.22)",
-            padding: "3px 8px",
-            borderRadius: 6,
-            whiteSpace: "nowrap",
-          }}
-        >
+        <div className="absolute bottom-2.5 left-1/2 -translate-x-1/2 font-mono text-[10px] tracking-[0.5px] uppercase text-white/80 bg-[rgba(43,27,23,0.22)] px-2 py-0.75 rounded-md whitespace-nowrap">
           photo · {r.cuisine}
         </div>
       )}

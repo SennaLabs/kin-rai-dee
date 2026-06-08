@@ -11,15 +11,9 @@ type ScreenProps = {
 export function Screen({ children, bg, style }: ScreenProps) {
   return (
     <div
-      className="font-body"
+      className="relative h-full flex flex-col overflow-hidden text-ink font-body bg-cream"
       style={{
-        position: "relative",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        background: bg || "var(--cream)",
-        color: "var(--ink)",
-        overflow: "hidden",
+        background: bg || undefined,
         ...style,
       }}
     >

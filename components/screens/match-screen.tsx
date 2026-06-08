@@ -9,6 +9,7 @@ import { FoodPhoto } from "@/components/ui/food-photo";
 import { buzz } from "@/components/ui/motion";
 import { Screen } from "@/components/ui/screen";
 import { Stars } from "@/components/ui/stars";
+import { cn } from "@/lib/utils/cn";
 import { priceStr } from "@/lib/data";
 import type { Player, Restaurant } from "@/lib/types";
 
@@ -17,56 +18,20 @@ const ITEM_H = 150;
 function ReelItem({ r }: { r: Restaurant }) {
   return (
     <div
-      style={{
-        height: ITEM_H,
-        display: "flex",
-        alignItems: "center",
-        gap: 16,
-        padding: "0 22px",
-        boxSizing: "border-box",
-      }}
+      className="flex items-center gap-4 px-5.5 box-border"
+      style={{ height: ITEM_H }}
     >
-      <div
-        style={{
-          width: 96,
-          height: 96,
-          borderRadius: 22,
-          overflow: "hidden",
-          flexShrink: 0,
-          boxShadow: "0 8px 18px rgba(43,27,23,0.18)",
-        }}
-      >
+      <div className="w-24 h-24 rounded-[22px] overflow-hidden shrink-0 shadow-[0_8px_18px_rgba(43,27,23,0.18)]">
         <FoodPhoto r={r} label={false} />
       </div>
-      <div style={{ minWidth: 0 }}>
-        <div
-          className="font-display"
-          style={{
-            fontSize: 25,
-            fontWeight: 600,
-            color: "var(--ink)",
-            lineHeight: 1.1,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
+      <div className="min-w-0">
+        <div className="font-display text-[25px] font-semibold text-ink leading-[1.1] whitespace-nowrap overflow-hidden text-ellipsis">
           {r.name}
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginTop: 6,
-            fontWeight: 600,
-            fontSize: 14,
-            color: "var(--ink-2)",
-          }}
-        >
+        <div className="flex items-center gap-2 mt-1.5 font-semibold text-sm text-ink-2">
           <Stars value={r.rating} size={14} /> {r.rating}
-          <span style={{ color: "var(--ink-3)" }}>·</span> {priceStr(r.price)}
-          <span style={{ color: "var(--ink-3)" }}>·</span> {r.dist} กม.
+          <span className="text-ink-3">·</span> {priceStr(r.price)}
+          <span className="text-ink-3">·</span> {r.dist} กม.
         </div>
       </div>
     </div>
@@ -150,109 +115,60 @@ export function MatchScreen({
       <Confetti fire={phase === "revealed" && confetti} reduced={reduced} />
 
       {/* glowing rings backdrop */}
-      <div
-        style={{
-          position: "absolute",
-          top: "12%",
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: 460,
-          height: 460,
-          pointerEvents: "none",
-        }}
-      >
+      <div className="absolute top-[12%] left-1/2 -translate-x-1/2 w-115 h-115 pointer-events-none">
         {[0, 1, 2].map((i) => (
           <span
             key={i}
-            style={{
-              position: "absolute",
-              inset: i * 46,
-              borderRadius: "50%",
-              border: "2px solid rgba(255,255,255,0.16)",
-            }}
+            className="absolute rounded-full border-2 border-white/[0.16]"
+            style={{ inset: i * 46 }}
           />
         ))}
       </div>
 
       {/* ── header / status ── */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "60px 24px 0",
-          textAlign: "center",
-          position: "relative",
-          zIndex: 5,
-        }}
-      >
+      <div className="shrink-0 pt-15 px-6 pb-0 text-center relative z-5">
         {phase !== "revealed" ? (
           <div>
             {/* radar around avatars */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 14,
-                marginBottom: 22,
-              }}
-            >
+            <div className="flex justify-center gap-3.5 mb-5.5">
               {players.map((p, i) => (
                 <div
                   key={p.id}
-                  style={{
-                    position: "relative",
-                    animation: reduced
-                      ? "none"
-                      : "rmHeartbeat 1.3s ease-in-out infinite",
-                    animationDelay: `${i * 0.12}s`,
-                  }}
+                  className={cn(
+                    "relative",
+                    !reduced && "animate-[rmHeartbeat_1.3s_ease-in-out_infinite]",
+                  )}
+                  style={{ animationDelay: `${i * 0.12}s` }}
                 >
                   <Avatar p={p} size={46} ring />
                   <span
-                    style={{
-                      position: "absolute",
-                      inset: -6,
-                      borderRadius: "50%",
-                      border: "2px solid rgba(255,255,255,0.5)",
-                      animation: reduced
-                        ? "none"
-                        : "rmPulseRing 1.5s ease-out infinite",
-                      animationDelay: `${i * 0.12}s`,
-                    }}
+                    className={cn(
+                      "absolute -inset-1.5 rounded-full border-2 border-white/50",
+                      !reduced && "animate-[rmPulseRing_1.5s_ease-out_infinite]",
+                    )}
+                    style={{ animationDelay: `${i * 0.12}s` }}
                   />
                 </div>
               ))}
             </div>
-            <div
-              className="font-display"
-              style={{ fontSize: 27, fontWeight: 600, letterSpacing: 0.3 }}
-            >
+            <div className="font-display text-[27px] font-semibold tracking-[0.3px]">
               กำลังจับคู่ความอยาก…
             </div>
-            <div style={{ fontSize: 15, opacity: 0.85, marginTop: 4 }}>
+            <div className="text-[15px] opacity-85 mt-1">
               ทุกคนเล็งร้านเดียวกันแล้ว 👀
             </div>
           </div>
         ) : (
           <div
-            style={{
-              animation: reduced
-                ? "none"
-                : "rmBounceIn .6s cubic-bezier(.34,1.56,.5,1)",
-            }}
+            className={cn(
+              !reduced && "animate-[rmBounceIn_.6s_cubic-bezier(.34,1.56,.5,1)]",
+            )}
           >
-            <div style={{ fontSize: 50, marginBottom: 2 }}>🎉</div>
-            <div
-              className="font-display"
-              style={{
-                fontSize: 52,
-                fontWeight: 700,
-                lineHeight: 1,
-                textShadow: "0 4px 0 rgba(0,0,0,0.12)",
-              }}
-            >
+            <div className="text-[50px] mb-0.5">🎉</div>
+            <div className="font-display text-[52px] font-bold leading-none [text-shadow:0_4px_0_rgba(0,0,0,0.12)]">
               แมตช์แล้ว!
             </div>
-            <div style={{ fontSize: 15.5, opacity: 0.92, marginTop: 8 }}>
+            <div className="text-[15.5px] opacity-[0.92] mt-2">
               ทุกคนชอบร้านนี้ตรงกัน 🙌
             </div>
           </div>
@@ -260,31 +176,12 @@ export function MatchScreen({
       </div>
 
       {/* ── slot reel / winner card ── */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "14px 18px",
-          position: "relative",
-          zIndex: 5,
-          minHeight: 0,
-        }}
-      >
+      <div className="flex-1 flex items-center justify-center py-3.5 px-4.5 relative z-5 min-h-0">
         {phase !== "revealed" ? (
           // SLOT MACHINE WINDOW
           <div
-            style={{
-              width: "100%",
-              height: ITEM_H,
-              borderRadius: 26,
-              background: "#fff",
-              boxShadow:
-                "0 22px 50px rgba(43,27,23,0.34), inset 0 0 0 4px rgba(255,255,255,0.6)",
-              overflow: "hidden",
-              position: "relative",
-            }}
+            className="w-full rounded-lg bg-white overflow-hidden relative shadow-[0_22px_50px_rgba(43,27,23,0.34),inset_0_0_0_4px_rgba(255,255,255,0.6)]"
+            style={{ height: ITEM_H }}
           >
             <div style={{ transform: `translateY(${-offset}px)`, transition: trans }}>
               {seq.map((r, i) => (
@@ -292,127 +189,47 @@ export function MatchScreen({
               ))}
             </div>
             {/* center highlight + edge fades */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                pointerEvents: "none",
-                boxShadow:
-                  "inset 0 28px 26px -22px rgba(255,255,255,0.95), inset 0 -28px 26px -22px rgba(255,255,255,0.95)",
-              }}
-            />
-            <div
-              style={{
-                position: "absolute",
-                left: 0,
-                right: 0,
-                top: "50%",
-                height: 2,
-                background:
-                  "linear-gradient(90deg, transparent, rgba(255,90,60,0.5), transparent)",
-                transform: "translateY(-1px)",
-              }}
-            />
+            <div className="absolute inset-0 pointer-events-none shadow-[inset_0_28px_26px_-22px_rgba(255,255,255,0.95),inset_0_-28px_26px_-22px_rgba(255,255,255,0.95)]" />
+            <div className="absolute left-0 right-0 top-1/2 h-0.5 -translate-y-px bg-[linear-gradient(90deg,transparent,rgba(255,90,60,0.5),transparent)]" />
           </div>
         ) : (
           // WINNER CARD
           <div
-            style={{
-              width: "100%",
-              animation: reduced
-                ? "none"
-                : "rmDropIn .5s cubic-bezier(.34,1.5,.5,1) .1s both",
-            }}
+            className={cn(
+              "w-full",
+              !reduced &&
+                "animate-[rmDropIn_.5s_cubic-bezier(.34,1.5,.5,1)_.1s_both]",
+            )}
           >
-            <div
-              style={{
-                borderRadius: 28,
-                overflow: "hidden",
-                background: "#fff",
-                boxShadow: "0 24px 54px rgba(43,27,23,0.4)",
-              }}
-            >
-              <div style={{ height: 188, position: "relative" }}>
+            <div className="rounded-[28px] overflow-hidden bg-white shadow-[0_24px_54px_rgba(43,27,23,0.4)]">
+              <div className="h-47 relative">
                 <FoodPhoto r={winner} big label={false} />
-                <div
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    background:
-                      "linear-gradient(180deg, transparent 50%, rgba(43,27,23,0.78))",
-                  }}
-                />
-                <div
-                  style={{
-                    position: "absolute",
-                    top: 14,
-                    left: 14,
-                    background: "rgba(255,200,69,0.96)",
-                    color: "var(--ink)",
-                    fontFamily: "var(--font-display)",
-                    fontWeight: 600,
-                    fontSize: 13,
-                    padding: "5px 12px",
-                    borderRadius: 999,
-                  }}
-                >
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_50%,rgba(43,27,23,0.78))]" />
+                <div className="absolute top-3.5 left-3.5 bg-[rgba(255,200,69,0.96)] text-ink font-display font-semibold text-[13px] py-1.25 px-3 rounded-full">
                   🏆 ร้านที่ชนะ
                 </div>
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 18,
-                    right: 18,
-                    bottom: 14,
-                    color: "#fff",
-                  }}
-                >
-                  <div
-                    className="font-display"
-                    style={{ fontSize: 28, fontWeight: 600, lineHeight: 1.1 }}
-                  >
+                <div className="absolute left-4.5 right-4.5 bottom-3.5 text-white">
+                  <div className="font-display text-[28px] font-semibold leading-[1.1]">
                     {winner.name}
                   </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 9,
-                      marginTop: 6,
-                      fontWeight: 600,
-                      fontSize: 14,
-                    }}
-                  >
+                  <div className="flex items-center gap-2.25 mt-1.5 font-semibold text-sm">
                     <Stars value={winner.rating} size={14} color="#FFC845" />{" "}
                     {winner.rating}
-                    <span style={{ opacity: 0.7 }}>·</span> {priceStr(winner.price)}
-                    <span style={{ opacity: 0.7 }}>·</span> {winner.dist} กม.
+                    <span className="opacity-70">·</span> {priceStr(winner.price)}
+                    <span className="opacity-70">·</span> {winner.dist} กม.
                   </div>
                 </div>
               </div>
               {/* everyone liked row */}
-              <div
-                style={{
-                  padding: "13px 18px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
-                <div style={{ display: "flex" }}>
+              <div className="py-3.25 px-4.5 flex items-center gap-2.5">
+                <div className="flex">
                   {players.map((p, i) => (
-                    <div key={p.id} style={{ marginLeft: i ? -9 : 0 }}>
+                    <div key={p.id} className={cn(i ? "-ml-2.25" : "ml-0")}>
                       <Avatar p={p} size={32} />
                     </div>
                   ))}
                 </div>
-                <span
-                  style={{
-                    fontWeight: 600,
-                    fontSize: 13.5,
-                    color: "var(--ink-2)",
-                  }}
-                >
+                <span className="font-semibold text-[13.5px] text-ink-2">
                   ทุกคนปัด “ชอบ” ❤️
                 </span>
               </div>
@@ -422,69 +239,40 @@ export function MatchScreen({
       </div>
 
       {/* ── actions ── */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "6px 22px max(20px, env(safe-area-inset-bottom))",
-          position: "relative",
-          zIndex: 5,
-        }}
-      >
+      <div className="shrink-0 pt-1.5 px-5.5 pb-[max(20px,env(safe-area-inset-bottom))] relative z-5">
         {phase === "revealed" ? (
           <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 11,
-              animation: reduced ? "none" : "rmRise .5s ease .25s both",
-            }}
+            className={cn(
+              "flex flex-col gap-2.75",
+              !reduced && "animate-[rmRise_.5s_ease_.25s_both]",
+            )}
           >
             <PrimaryButton
               color="linear-gradient(180deg,#fff,#FFF1E8)"
-              style={{ color: "var(--cta)" }}
+              className="text-cta"
               onClick={onOpen}
             >
-              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <span className="inline-flex items-center justify-center gap-2">
                 ดูรายละเอียดร้าน <ArrowRightIcon size={20} weight="bold" />
               </span>
             </PrimaryButton>
             <button
-              className="rm-tap font-display"
+              className="rm-tap font-display bg-transparent border-none text-white font-medium text-[15px] cursor-pointer p-2 opacity-[0.92]"
               onClick={onAgain}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#fff",
-                fontWeight: 500,
-                fontSize: 15,
-                cursor: "pointer",
-                padding: 8,
-                opacity: 0.92,
-              }}
             >
               หาร้านอื่นต่อ
             </button>
             <button
-              className="rm-tap font-display"
+              className="rm-tap font-display bg-transparent border-none text-white font-normal text-sm cursor-pointer py-1 px-2 opacity-70"
               onClick={onHome}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "#fff",
-                fontWeight: 400,
-                fontSize: 14,
-                cursor: "pointer",
-                padding: "4px 8px",
-                opacity: 0.7,
-              }}
             >
-              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <span className="inline-flex items-center justify-center gap-1.5">
                 <ArrowLeftIcon size={16} weight="bold" /> กลับหน้าหลัก
               </span>
             </button>
           </div>
         ) : (
-          <div style={{ height: 92 }} />
+          <div className="h-23" />
         )}
       </div>
     </Screen>

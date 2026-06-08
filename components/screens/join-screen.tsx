@@ -6,6 +6,7 @@ import { PrimaryButton } from "@/components/ui/buttons";
 import { buzz } from "@/components/ui/motion";
 import { Screen } from "@/components/ui/screen";
 import { avatars } from "@/assets/avatars";
+import { cn } from "@/lib/utils/cn";
 
 type JoinScreenProps = {
   onBack: () => void;
@@ -36,25 +37,13 @@ export function JoinScreen({
   return (
     <Screen bg="var(--cream-2)">
       <BackHeader title="เข้าร่วมห้อง" onBack={onBack} />
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "14px 22px 16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 22,
-        }}
-      >
+      <div className="flex-1 overflow-auto pt-3.5 px-5.5 pb-4 flex flex-col gap-5.5">
         {/* OTP code */}
         <div>
-          <label
-            className="font-display"
-            style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}
-          >
+          <label className="font-display text-sm font-semibold text-ink">
             โค้ดห้อง 4 หลัก
           </label>
-          <div style={{ position: "relative", marginTop: 10 }}>
+          <div className="relative mt-2.5">
             <input
               ref={inputRef}
               value={code}
@@ -63,17 +52,10 @@ export function JoinScreen({
               maxLength={4}
               aria-label="โค้ดห้อง 4 ตัว"
               onChange={(e) => setCode(sanitizeCode(e.target.value))}
-              style={{
-                position: "absolute",
-                inset: 0,
-                opacity: 0,
-                width: "100%",
-                height: "100%",
-                cursor: "pointer",
-              }}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
             />
             <div
-              style={{ display: "flex", gap: 12, justifyContent: "center" }}
+              className="flex gap-3 justify-center"
               onClick={() => inputRef.current?.focus()}
             >
               {[0, 1, 2, 3].map((i) => {
@@ -82,35 +64,19 @@ export function JoinScreen({
                 return (
                   <div
                     key={i}
-                    style={{
-                      width: 62,
-                      height: 74,
-                      borderRadius: 18,
-                      background: "#fff",
-                      border: active
-                        ? "3px solid var(--coral)"
+                    className={cn(
+                      "w-15.5 h-18.5 rounded-[18px] bg-white flex items-center justify-center font-display font-bold text-[34px] text-ink transition-all duration-150",
+                      active
+                        ? "border-[3px] border-coral shadow-soft"
                         : filled
-                          ? "2px solid var(--coral)"
-                          : "2px solid var(--line-strong)",
-                      boxShadow: filled
-                        ? "0 8px 18px rgba(255,90,60,0.18)"
-                        : "var(--sh-soft)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontFamily: "var(--font-display)",
-                      fontWeight: 700,
-                      fontSize: 34,
-                      color: "var(--ink)",
-                      transition: "all .15s",
-                    }}
+                          ? "border-2 border-coral shadow-[0_8px_18px_rgba(255,90,60,0.18)]"
+                          : "border-2 border-line-strong shadow-soft"
+                    )}
                   >
                     <span
-                      style={{
-                        animation: filled
-                          ? "rmPop .3s cubic-bezier(.34,1.7,.5,1)"
-                          : "none",
-                      }}
+                      className={cn(
+                        filled && "animate-[rmPop_.3s_cubic-bezier(.34,1.7,.5,1)]"
+                      )}
                     >
                       {code[i] || ""}
                     </span>
@@ -119,24 +85,14 @@ export function JoinScreen({
               })}
             </div>
           </div>
-          <p
-            style={{
-              textAlign: "center",
-              fontSize: 12.5,
-              color: "var(--ink-3)",
-              marginTop: 10,
-            }}
-          >
+          <p className="text-center text-xs text-ink-3 mt-2.5">
             ขอโค้ด 4 ตัวอักษรจากเพื่อนที่สร้างห้อง
           </p>
         </div>
 
         {/* nickname */}
         <div>
-          <label
-            className="font-display"
-            style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}
-          >
+          <label className="font-display text-sm font-semibold text-ink">
             ชื่อเล่น
           </label>
           <input
@@ -144,73 +100,39 @@ export function JoinScreen({
             onChange={(e) => setName(e.target.value)}
             placeholder="พิมพ์ชื่อเล่น…"
             maxLength={12}
-            className="rm-focusable font-body"
-            style={{
-              width: "100%",
-              marginTop: 10,
-              boxSizing: "border-box",
-              height: 54,
-              borderRadius: 16,
-              border: "2px solid var(--line-strong)",
-              background: "#fff",
-              padding: "0 16px",
-              fontSize: 17,
-              color: "var(--ink)",
-              outline: "none",
-            }}
+            className="rm-focusable font-body w-full mt-2.5 box-border h-13.5 rounded-2xl border-2 border-line-strong bg-white px-4 text-[17px] text-ink outline-none"
           />
         </div>
 
         {/* avatar */}
         <div>
-          <label
-            className="font-display"
-            style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}
-          >
+          <label className="font-display text-sm font-semibold text-ink">
             เลือก avatar
           </label>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 10,
-              marginTop: 10,
-            }}
-          >
+          <div className="grid grid-cols-4 gap-2.5 mt-2.5">
             {avatars.map(({ id, Component, label }) => {
               const value = String(id);
               const selected = avatar === value;
               return (
                 <button
                   key={id}
-                  className="rm-tap"
+                  className={cn(
+                    "rm-tap aspect-square rounded-[14px] cursor-pointer overflow-hidden p-1 flex items-center justify-center transition-all duration-150",
+                    selected
+                      ? "border-[2.5px] border-coral bg-[rgba(255,90,60,0.1)] scale-[1.05]"
+                      : "border-2 border-line bg-white scale-100"
+                  )}
                   aria-label={`เลือก avatar ${label}`}
                   aria-pressed={selected}
                   onClick={() => {
                     setAvatar(value);
                     buzz(8);
                   }}
-                  style={{
-                    aspectRatio: "1",
-                    borderRadius: 14,
-                    cursor: "pointer",
-                    overflow: "hidden",
-                    padding: 4,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    border: selected
-                      ? "2.5px solid var(--coral)"
-                      : "2px solid var(--line)",
-                    background: selected ? "rgba(255,90,60,0.1)" : "#fff",
-                    transform: selected ? "scale(1.05)" : "scale(1)",
-                    transition: "all .15s",
-                  }}
                 >
                   <Component
                     width="100%"
                     height="100%"
-                    style={{ display: "block" }}
+                    className="block"
                   />
                 </button>
               );
@@ -219,22 +141,9 @@ export function JoinScreen({
         </div>
       </div>
 
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "12px 24px max(20px, env(safe-area-inset-bottom))",
-        }}
-      >
+      <div className="shrink-0 pt-3 px-6 pb-[max(20px,env(safe-area-inset-bottom))]">
         {error && (
-          <p
-            style={{
-              margin: "0 0 10px",
-              fontSize: 13.5,
-              color: "var(--cta)",
-              textAlign: "center",
-              fontWeight: 600,
-            }}
-          >
+          <p className="mb-2.5 text-[13.5px] text-cta text-center font-semibold">
             {error}
           </p>
         )}

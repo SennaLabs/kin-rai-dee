@@ -12,6 +12,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { buzz } from "@/components/ui/motion";
 import { Screen } from "@/components/ui/screen";
+import { cn } from "@/lib/utils/cn";
 import type { Player } from "@/lib/types";
 
 type LobbyScreenProps = {
@@ -80,73 +81,27 @@ export function LobbyScreen({
   return (
     <Screen bg="var(--cream-2)">
       <button
-        className="rm-tap font-display"
+        className="rm-tap font-display absolute top-12.5 left-4 z-5 border-none bg-white/80 text-ink-3 font-semibold text-[13px] py-1.75 px-3.25 rounded-full cursor-pointer shadow-soft inline-flex items-center gap-1"
         onClick={onLeave}
-        style={{
-          position: "absolute",
-          top: 50,
-          left: 16,
-          zIndex: 5,
-          border: "none",
-          background: "rgba(255,255,255,0.8)",
-          color: "var(--ink-3)",
-          fontWeight: 600,
-          fontSize: 13,
-          padding: "7px 13px",
-          borderRadius: 999,
-          cursor: "pointer",
-          boxShadow: "var(--sh-soft)",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 4,
-        }}
       >
         <ArrowLeftIcon size={14} weight="bold" /> ออก
       </button>
-      <div
-        style={{ flexShrink: 0, padding: "54px 22px 0", textAlign: "center" }}
-      >
-        <div
-          style={{
-            fontSize: 14,
-            color: "var(--ink-3)",
-            fontWeight: 600,
-          }}
-        >
+      <div className="shrink-0 pt-13.5 px-5.5 pb-0 text-center">
+        <div className="text-sm text-ink-3 font-semibold">
           ห้องของคุณ · รอเพื่อนเข้ามา
         </div>
         {/* big code */}
         <div
-          className="font-display"
-          style={{
-            fontSize: 64,
-            fontWeight: 700,
-            letterSpacing: 8,
-            color: "var(--cta)",
-            lineHeight: 1.1,
-            marginTop: 4,
-          }}
+          className="font-display text-[64px] font-bold text-cta leading-[1.1] mt-1 tracking-[8px]"
         >
           {code}
         </div>
         <button
-          className="rm-tap font-display"
+          className={cn(
+            "rm-tap font-display mt-1 inline-flex items-center gap-2 border-none font-semibold text-sm py-2.25 px-4.5 rounded-full cursor-pointer transition-all duration-200",
+            copied ? "bg-good text-white" : "bg-[rgba(255,90,60,0.12)] text-cta"
+          )}
           onClick={share}
-          style={{
-            marginTop: 4,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 8,
-            border: "none",
-            background: copied ? "var(--good)" : "rgba(255,90,60,0.12)",
-            color: copied ? "#fff" : "var(--cta)",
-            fontWeight: 600,
-            fontSize: 14,
-            padding: "9px 18px",
-            borderRadius: 999,
-            cursor: "pointer",
-            transition: "all .2s",
-          }}
         >
           {copied ? (
             <>
@@ -160,94 +115,53 @@ export function LobbyScreen({
         </button>
       </div>
 
-      <div style={{ flex: 1, overflow: "auto", padding: "20px 20px 12px" }}>
+      <div className="flex-1 overflow-auto p-5 pb-3">
         {/* live players */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12,
-          }}
-        >
+        <div className="flex items-center justify-between mb-3">
           <span
-            className="font-display"
-            style={{ fontSize: 17, fontWeight: 600, color: "var(--ink)" }}
+            className="font-display text-[17px] font-semibold text-ink"
           >
             ผู้เล่นในห้อง
           </span>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--good)",
-            }}
-          >
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-good">
             <span
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 9,
-                background: "var(--good)",
-                animation: reduced ? "none" : "rmHeartbeat 1.4s infinite",
-              }}
+              className={cn(
+                "w-2 h-2 rounded-full bg-good",
+                !reduced && "animate-[rmHeartbeat_1.4s_infinite]"
+              )}
             />
             {onlineCount} ออนไลน์
           </span>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {players.map((p) => {
             const isReady = p.ready;
             return (
               <div
                 key={p.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  background: "#fff",
-                  borderRadius: 18,
-                  padding: "11px 14px",
-                  boxShadow: "var(--sh-soft)",
-                  animation: reduced
-                    ? "none"
-                    : "rmDropIn .45s cubic-bezier(.34,1.5,.5,1)",
-                }}
+                className={cn(
+                  "flex items-center gap-3 bg-white rounded-[18px] py-2.75 px-3.5 shadow-soft",
+                  !reduced && "animate-[rmDropIn_.45s_cubic-bezier(.34,1.5,.5,1)]"
+                )}
               >
                 <Avatar p={p} size={44} check={isReady} />
-                <div style={{ flex: 1 }}>
+                <div className="flex-1">
                   <div
-                    className="font-display"
-                    style={{
-                      fontSize: 16,
-                      fontWeight: 600,
-                      color: "var(--ink)",
-                    }}
+                    className="font-display text-base font-semibold text-ink"
                   >
                     {p.name}{" "}
                     {p.me && (
-                      <span style={{ color: "var(--ink-3)", fontSize: 13 }}>
+                      <span className="text-ink-3 text-[13px]">
                         (คุณ)
                       </span>
                     )}
                   </div>
                   <div
-                    style={{
-                      fontSize: 12.5,
-                      color: !p.connected
-                        ? "var(--ink-3)"
-                        : isReady
-                          ? "var(--good)"
-                          : "var(--ink-3)",
-                      fontWeight: 600,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 3,
-                    }}
+                    className={cn(
+                      "text-xs font-semibold inline-flex items-center gap-0.75",
+                      !p.connected || !isReady ? "text-ink-3" : "text-good"
+                    )}
                   >
                     {!p.connected ? (
                       <>
@@ -263,16 +177,7 @@ export function LobbyScreen({
                   </div>
                 </div>
                 {p.host && (
-                  <span
-                    style={{
-                      fontSize: 11.5,
-                      fontWeight: 700,
-                      color: "var(--amber)",
-                      background: "rgba(255,182,39,0.16)",
-                      padding: "4px 10px",
-                      borderRadius: 999,
-                    }}
-                  >
+                  <span className="text-[11.5px] font-bold text-amber bg-[rgba(255,182,39,0.16)] py-1 px-2.5 rounded-full">
                     👑 โฮสต์
                   </span>
                 )}
@@ -281,39 +186,16 @@ export function LobbyScreen({
           })}
           {/* waiting ghost slot */}
           {players.length < 2 && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                border: "2px dashed var(--line-strong)",
-                borderRadius: 18,
-                padding: "11px 14px",
-              }}
-            >
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: "50%",
-                  background: "var(--cream-3)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+            <div className="flex items-center gap-3 border-2 border-dashed border-line-strong rounded-[18px] py-2.75 px-3.5">
+              <div className="w-11 h-11 rounded-full bg-cream-3 flex items-center justify-center">
                 <span
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: 9,
-                    background: "var(--ink-3)",
-                    boxShadow: "10px 0 var(--ink-3), -10px 0 var(--ink-3)",
-                    animation: reduced ? "none" : "rmHeartbeat 1.2s infinite",
-                  }}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full bg-ink-3 [box-shadow:10px_0_var(--ink-3),-10px_0_var(--ink-3)]",
+                    !reduced && "animate-[rmHeartbeat_1.2s_infinite]"
+                  )}
                 />
               </div>
-              <span style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
+              <span className="text-[13.5px] text-ink-3">
                 รอเพื่อนเข้าห้อง…
               </span>
             </div>
@@ -321,58 +203,22 @@ export function LobbyScreen({
         </div>
 
         {/* room settings */}
-        <div
-          style={{
-            marginTop: 18,
-            background: "rgba(255,255,255,0.7)",
-            borderRadius: 18,
-            padding: "14px 16px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 8,
-            }}
-          >
+        <div className="mt-4.5 bg-white/70 rounded-[18px] py-3.5 px-4">
+          <div className="flex items-center justify-between mb-2">
             <span
-              className="font-display"
-              style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}
+              className="font-display text-sm font-semibold text-ink"
             >
               ตั้งค่าห้อง
             </span>
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-                fontSize: 12,
-                color: "var(--cta)",
-                fontWeight: 600,
-              }}
-            >
+            <span className="inline-flex items-center gap-1 text-xs text-cta font-semibold">
               โฮสต์แก้ได้ <PencilSimpleIcon size={12} weight="bold" />
             </span>
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            
+          <div className="flex flex-wrap gap-1.75">
             {(roomSettings ?? DEFAULT_SETTINGS).map((t, i) => (
               <span
                 key={i}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 4,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  color: "var(--ink-2)",
-                  background: "#fff",
-                  padding: "6px 12px",
-                  borderRadius: 999,
-                  boxShadow: "var(--sh-soft)",
-                }}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-ink-2 bg-white py-1.5 px-3 rounded-full shadow-soft"
               >
                 {t}
               </span>
@@ -382,49 +228,28 @@ export function LobbyScreen({
       </div>
 
       {/* thumb-zone: ready + start */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "12px 22px max(20px, env(safe-area-inset-bottom))",
-          display: "flex",
-          gap: 12,
-        }}
-      >
+      <div className="shrink-0 pt-3 px-5.5 pb-[max(20px,env(safe-area-inset-bottom))] flex gap-3">
         <button
-          className="rm-btn rm-tap font-display"
+          className={cn(
+            "rm-btn rm-tap font-display flex-1 min-h-14.5 rounded-full font-semibold text-lg cursor-pointer transition-all duration-150",
+            meReady
+              ? "border-none bg-good text-white"
+              : "border-2 border-solid border-good bg-white/70 text-good"
+          )}
           onClick={() => {
             onReady(!meReady);
             buzz(14);
           }}
-          style={{
-            flex: 1,
-            minHeight: 58,
-            borderRadius: 999,
-            border: meReady ? "none" : "2px solid var(--good)",
-            background: meReady ? "var(--good)" : "rgba(255,255,255,0.7)",
-            color: meReady ? "#fff" : "var(--good)",
-            fontWeight: 600,
-            fontSize: 18,
-            cursor: "pointer",
-            transition: "all .15s",
-          }}
         >
           {meReady ? (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-              }}
-            >
+            <span className="inline-flex items-center justify-center gap-1.5">
               <CheckIcon size={18} weight="bold" /> พร้อมแล้ว
             </span>
           ) : (
             "พร้อม"
           )}
         </button>
-        <div style={{ flex: 1.3 }}>
+        <div className="[flex:1.3]">
           {isHost ? (
             <PrimaryButton
               disabled={!canStart}

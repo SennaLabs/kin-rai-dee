@@ -10,6 +10,7 @@ import { ProgressBar } from "@/components/ui/progress-bar";
 import { Screen } from "@/components/ui/screen";
 import { Stars } from "@/components/ui/stars";
 import { priceStr } from "@/lib/data";
+import { cn } from "@/lib/utils/cn";
 import type { Player, Restaurant } from "@/lib/types";
 
 type Drag = { x: number; active: boolean };
@@ -43,188 +44,77 @@ function SwipeCard({ r, drag, top, depth, exiting }: SwipeCardProps) {
   }
   return (
     <div
-      style={{
-        position: "absolute",
-        inset: 0,
-        transform,
-        transition,
-        zIndex: 30 - depth,
-        willChange: "transform",
-        borderRadius: 28,
-        overflow: "hidden",
-        background: "#fff",
-        boxShadow: top
-          ? "0 20px 44px rgba(43,27,23,0.26)"
-          : "0 12px 28px rgba(43,27,23,0.14)",
-        border: "1px solid rgba(255,255,255,0.6)",
-      }}
+      className={cn(
+        "absolute inset-0 overflow-hidden rounded-[28px] bg-white border border-white/60 will-change-transform",
+        top
+          ? "shadow-[0_20px_44px_rgba(43,27,23,0.26)]"
+          : "shadow-[0_12px_28px_rgba(43,27,23,0.14)]",
+      )}
+      style={{ transform, transition, zIndex: 30 - depth }}
     >
       {/* photo area */}
-      <div style={{ position: "absolute", inset: 0 }}>
+      <div className="absolute inset-0">
         <FoodPhoto r={r} big />
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, transparent 38%, rgba(43,27,23,0.06) 56%, rgba(43,27,23,0.82) 100%)",
-          }}
-        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_38%,rgba(43,27,23,0.06)_56%,rgba(43,27,23,0.82)_100%)]" />
       </div>
 
       {/* open-now badge */}
-      <div
-        style={{
-          position: "absolute",
-          top: 16,
-          left: 16,
-          display: "flex",
-          gap: 8,
-        }}
-      >
+      <div className="absolute top-4 left-4 flex gap-2">
         <span
-          style={{
-            background: r.open ? "rgba(30,158,106,0.95)" : "rgba(43,27,23,0.7)",
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: 12.5,
-            padding: "5px 11px",
-            borderRadius: 999,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-          }}
+          className={cn(
+            "inline-flex items-center gap-1.25 text-white font-semibold text-xs px-2.75 py-1.25 rounded-full",
+            r.open ? "bg-[rgba(30,158,106,0.95)]" : "bg-[rgba(43,27,23,0.7)]",
+          )}
         >
-          <span
-            style={{ width: 7, height: 7, borderRadius: 9, background: "#fff" }}
-          />
+          <span className="w-1.75 h-1.75 rounded-full bg-white" />
           {r.open ? "เปิดอยู่" : "ปิดแล้ว"}
         </span>
-        <span
-          style={{
-            background: "rgba(255,255,255,0.92)",
-            color: "var(--ink)",
-            fontWeight: 700,
-            fontSize: 12.5,
-            padding: "5px 11px",
-            borderRadius: 999,
-          }}
-        >
+        <span className="bg-white/90 text-ink font-bold text-xs px-2.75 py-1.25 rounded-full">
           {r.dist} กม.
         </span>
       </div>
 
       {/* LIKE / PASS stamps */}
       <div
+        className="absolute top-6.5 right-4.5 rotate-12 flex items-center gap-2 border-4 border-white text-white rounded-[14px] px-4 py-1.5 bg-[rgba(230,57,70,0.9)] font-display font-bold text-[26px]"
         style={{
-          position: "absolute",
-          top: 26,
-          right: 18,
-          transform: "rotate(12deg)",
           opacity: top && liked ? stampOpacity : 0,
           transition: drag && drag.active ? "none" : "opacity .2s",
-          border: "4px solid #fff",
-          color: "#fff",
-          borderRadius: 14,
-          padding: "6px 16px",
-          background: "rgba(230,57,70,0.9)",
-          fontFamily: "var(--font-display)",
-          fontWeight: 700,
-          fontSize: 26,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
         }}
       >
         ชอบ ❤️
       </div>
       <div
+        className="absolute top-6.5 left-4.5 -rotate-12 flex items-center gap-2 border-4 border-white text-white rounded-[14px] px-4 py-1.5 bg-[rgba(43,27,23,0.78)] font-display font-bold text-[26px]"
         style={{
-          position: "absolute",
-          top: 26,
-          left: 18,
-          transform: "rotate(-12deg)",
           opacity: top && drag && drag.x < 0 ? stampOpacity : 0,
           transition: drag && drag.active ? "none" : "opacity .2s",
-          border: "4px solid #fff",
-          color: "#fff",
-          borderRadius: 14,
-          padding: "6px 16px",
-          background: "rgba(43,27,23,0.78)",
-          fontFamily: "var(--font-display)",
-          fontWeight: 700,
-          fontSize: 26,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
         }}
       >
         <XIcon size={26} weight="bold" />ผ่าน
       </div>
 
       {/* info */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          padding: "0 20px 22px",
-          color: "#fff",
-        }}
-      >
-        <div
-          className="font-display"
-          style={{
-            fontSize: 30,
-            fontWeight: 600,
-            lineHeight: 1.12,
-            textShadow: "0 2px 12px rgba(0,0,0,0.3)",
-          }}
-        >
+      <div className="absolute left-0 right-0 bottom-0 px-5 pb-5.5 text-white">
+        <div className="font-display text-3xl font-semibold leading-tight [text-shadow:0_2px_12px_rgba(0,0,0,0.3)]">
           {r.name}
         </div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginTop: 8,
-            flexWrap: "wrap",
-          }}
-        >
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              fontWeight: 700,
-              fontSize: 15,
-            }}
-          >
+        <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.25 font-bold text-sm">
             <Stars value={r.rating} size={15} color="#FFC845" /> {r.rating}
           </span>
-          <span style={{ opacity: 0.85, fontSize: 14 }}>
+          <span className="opacity-85 text-sm">
             ({r.reviews.toLocaleString()})
           </span>
-          <span style={{ fontWeight: 700, fontSize: 15, color: "#FFD9A8" }}>
+          <span className="font-bold text-sm text-[#FFD9A8]">
             {priceStr(r.price)}
           </span>
         </div>
-        <div
-          style={{ display: "flex", gap: 7, marginTop: 11, flexWrap: "wrap" }}
-        >
+        <div className="flex gap-1.75 mt-2.75 flex-wrap">
           {r.tags.map((t) => (
             <span
               key={t}
-              style={{
-                background: "rgba(255,255,255,0.22)",
-                backdropFilter: "blur(4px)",
-                padding: "4px 11px",
-                borderRadius: 999,
-                fontSize: 12.5,
-                fontWeight: 600,
-              }}
+              className="bg-white/20 backdrop-blur-sm px-2.75 py-1 rounded-full text-xs font-semibold"
             >
               {t}
             </span>
@@ -323,25 +213,15 @@ export function SwipeScreen({
   return (
     <Screen bg="var(--cream)">
       {/* ── realtime header ── */}
-      <div style={{ padding: "52px 18px 10px", flexShrink: 0 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-          }}
-        >
-          <span
-            className="font-display"
-            style={{ fontSize: 19, fontWeight: 600, color: "var(--ink)" }}
-          >
-            ห้อง <span style={{ color: "var(--cta)" }}>#{code}</span>
+      <div className="pt-13 px-4.5 pb-2.5 shrink-0">
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-display text-lg font-semibold text-ink">
+            ห้อง <span className="text-cta">#{code}</span>
           </span>
           {/* avatar row of everyone */}
-          <div style={{ display: "flex", alignItems: "center" }}>
+          <div className="flex items-center">
             {players.map((p, i) => (
-              <div key={p.id} style={{ marginLeft: i ? -10 : 0 }}>
+              <div key={p.id} className={cn(i && "-ml-2.5")}>
                 <Avatar p={p} size={34} />
               </div>
             ))}
@@ -349,38 +229,16 @@ export function SwipeScreen({
         </div>
 
         {/* progress + teaser */}
-        <div
-          style={{
-            marginTop: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}
-        >
-          <div style={{ flex: 1 }}>
+        <div className="mt-3 flex items-center gap-3">
+          <div className="flex-1">
             <ProgressBar value={idx} max={deck.length} />
           </div>
-          <span
-            style={{
-              fontWeight: 600,
-              fontSize: 13,
-              color: "var(--ink-2)",
-              whiteSpace: "nowrap",
-            }}
-          >
+          <span className="font-semibold text-[13px] text-ink-2 whitespace-nowrap">
             ใบ {Math.min(idx + 1, deck.length)}/{deck.length}
           </span>
         </div>
-        <div
-          style={{
-            marginTop: 7,
-            height: 20,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
+        <div className="mt-1.75 h-5 flex items-center gap-2">
+          <span className="text-xs text-ink-3">
             {others.length > 0
               ? `เพื่อน ${friendsHere}/${others.length} คนปัดผ่านใบนี้แล้ว`
               : "รอเพื่อนเข้ามาปัด…"}
@@ -388,16 +246,10 @@ export function SwipeScreen({
           {likeTeaser >= 2 && (
             <span
               aria-live="polite"
-              style={{
-                marginLeft: "auto",
-                fontWeight: 700,
-                fontSize: 12.5,
-                color: "var(--cta)",
-                background: "rgba(255,90,60,0.12)",
-                padding: "3px 10px",
-                borderRadius: 999,
-                animation: reduced ? "none" : "rmPop .4s ease",
-              }}
+              className={cn(
+                "ml-auto font-bold text-xs text-cta bg-[rgba(255,90,60,0.12)] px-2.5 py-0.75 rounded-full",
+                !reduced && "animate-pop",
+              )}
             >
               🔥 {likeTeaser} คนชอบร้านนี้!
             </span>
@@ -406,18 +258,16 @@ export function SwipeScreen({
       </div>
 
       {/* ── card stack ── */}
-      <div style={{ flex: 1, position: "relative", margin: "6px 18px 0", minHeight: 0 }}>
+      <div className="flex-1 relative mx-4.5 mt-1.5 min-h-0">
         <div
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
           onPointerCancel={onUp}
-          style={{
-            position: "absolute",
-            inset: 0,
-            touchAction: "none",
-            cursor: drag?.active ? "grabbing" : "grab",
-          }}
+          className={cn(
+            "absolute inset-0 touch-none",
+            drag?.active ? "cursor-grabbing" : "cursor-grab",
+          )}
         >
           {current ? (
             [2, 1, 0].map((d) => {
@@ -435,24 +285,12 @@ export function SwipeScreen({
               );
             })
           ) : (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-                textAlign: "center",
-                color: "var(--ink-3)",
-              }}
-            >
-              <span style={{ fontSize: 44 }}>🍽️</span>
-              <span className="font-display" style={{ fontSize: 17, fontWeight: 600, color: "var(--ink-2)" }}>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 text-center text-ink-3">
+              <span className="text-[44px]">🍽️</span>
+              <span className="font-display text-[17px] font-semibold text-ink-2">
                 ปัดครบทุกใบแล้ว
               </span>
-              <span style={{ fontSize: 13.5 }}>กำลังรอเพื่อนปัดให้ครบ…</span>
+              <span className="text-[13.5px]">กำลังรอเพื่อนปัดให้ครบ…</span>
             </div>
           )}
         </div>
@@ -460,54 +298,15 @@ export function SwipeScreen({
 
       {/* "กำลังจับคู่…" radar when near end */}
       {nearEnd && (
-        <div
-          aria-live="polite"
-          style={{
-            flexShrink: 0,
-            display: "flex",
-            justifyContent: "center",
-            marginTop: 8,
-          }}
-        >
-          <span
-            className="font-display"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 9,
-              fontWeight: 500,
-              fontSize: 14,
-              color: "var(--cta)",
-              background: "rgba(255,255,255,0.8)",
-              padding: "7px 16px",
-              borderRadius: 999,
-              boxShadow: "var(--sh-soft)",
-            }}
-          >
-            <span
-              style={{
-                position: "relative",
-                width: 12,
-                height: 12,
-                display: "inline-block",
-              }}
-            >
+        <div aria-live="polite" className="shrink-0 flex justify-center mt-2">
+          <span className="font-display inline-flex items-center gap-2.25 font-medium text-sm text-cta bg-white/80 px-4 py-1.75 rounded-full shadow-soft">
+            <span className="relative w-3 h-3 inline-block">
+              <span className="absolute inset-0 rounded-full bg-cta" />
               <span
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: "50%",
-                  background: "var(--cta)",
-                }}
-              />
-              <span
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  borderRadius: "50%",
-                  border: "2px solid var(--cta)",
-                  animation: reduced ? "none" : "rmPulseRing 1.4s ease-out infinite",
-                }}
+                className={cn(
+                  "absolute inset-0 rounded-full border-2 border-cta",
+                  !reduced && "animate-pulse-ring",
+                )}
               />
             </span>
             กำลังจับคู่ความอยากของทุกคน…
@@ -516,16 +315,7 @@ export function SwipeScreen({
       )}
 
       {/* ── thumb-zone actions ── */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "14px 24px max(20px, env(safe-area-inset-bottom))",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 40,
-        }}
-      >
+      <div className="shrink-0 pt-3.5 px-6 pb-[max(20px,env(safe-area-inset-bottom))] flex items-center justify-center gap-10">
         <RoundButton kind="pass" onClick={() => decide(-1)} />
         <RoundButton kind="like" onClick={() => decide(1)} big />
       </div>

@@ -23,6 +23,7 @@ import { Screen } from "@/components/ui/screen";
 import { Stars } from "@/components/ui/stars";
 import { priceStr } from "@/lib/data";
 import type { Player, Restaurant } from "@/lib/types";
+import { cn } from "@/lib/utils/cn";
 
 const MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
@@ -71,128 +72,45 @@ export function DetailScreen({
   return (
     <Screen bg="var(--cream)">
       {/* hero photo */}
-      <div style={{ flexShrink: 0, height: 260, position: "relative" }}>
+      <div className="shrink-0 h-65 relative">
         <FoodPhoto r={r} big label={false} />
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(180deg, rgba(43,27,23,0.3) 0%, transparent 30%, transparent 55%, var(--cream) 100%)",
-          }}
-        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(43,27,23,0.3)_0%,transparent_30%,transparent_55%,var(--cream)_100%)]" />
         <button
-          className="rm-tap"
+          className="rm-tap absolute top-12.5 left-4 w-10.5 h-10.5 rounded-full border-none bg-[rgba(255,255,255,0.92)] shadow-[0_4px_12px_rgba(43,27,23,0.18)] cursor-pointer flex items-center justify-center"
           aria-label="ย้อนกลับ"
-          onClick={onBack}
-          style={{
-            position: "absolute",
-            top: 50,
-            left: 16,
-            width: 42,
-            height: 42,
-            borderRadius: "50%",
-            border: "none",
-            background: "rgba(255,255,255,0.92)",
-            boxShadow: "0 4px 12px rgba(43,27,23,0.18)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
+          onClick={onBack}>
           <CaretLeftIcon size={20} weight="bold" color="var(--ink)" />
         </button>
         {matched && (
-          <div
-            style={{
-              position: "absolute",
-              top: 50,
-              right: 16,
-              background: "rgba(255,200,69,0.96)",
-              color: "var(--ink)",
-              fontFamily: "var(--font-display)",
-              fontWeight: 600,
-              fontSize: 13,
-              padding: "7px 13px",
-              borderRadius: 999,
-            }}>
+          <div className="absolute top-12.5 right-4 bg-[rgba(255,200,69,0.96)] text-ink font-display font-semibold text-[13px] px-3.25 py-1.75 rounded-full">
             🏆 ร้านที่แมตช์
           </div>
         )}
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "0 22px 14px",
-        }}>
-        <h1
-          className="font-display"
-          style={{
-            margin: 0,
-            fontSize: 30,
-            fontWeight: 700,
-            color: "var(--ink)",
-            lineHeight: 1.12,
-          }}>
+      <div className="flex-1 overflow-auto px-5.5 pt-0 pb-3.5">
+        <h1 className="font-display m-0 text-3xl font-bold text-ink leading-[1.12]">
           {r.name}
         </h1>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginTop: 8,
-            flexWrap: "wrap",
-          }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              fontWeight: 700,
-              fontSize: 15,
-              color: "var(--ink)",
-            }}>
+        <div className="flex items-center gap-2.5 mt-2 flex-wrap">
+          <span className="inline-flex items-center gap-1.25 font-bold text-sm text-ink">
             <Stars value={r.rating} size={15} /> {r.rating}
           </span>
-          <span style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
+          <span className="text-[13.5px] text-ink-3">
             ({r.reviews.toLocaleString()} รีวิว)
           </span>
-          <span
-            style={{
-              fontFamily: "var(--font-display)",
-              fontWeight: 600,
-              fontSize: 15,
-              color: "var(--cta)",
-            }}>
+          <span className="font-display font-semibold text-sm text-cta">
             {priceStr(r.price)}
           </span>
-          <span style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-            · {r.cuisine}
-          </span>
+          <span className="text-[13.5px] text-ink-3">· {r.cuisine}</span>
         </div>
 
         {r.tags.length > 0 && (
-          <div
-            style={{
-              display: "flex",
-              gap: 7,
-              marginTop: 12,
-              flexWrap: "wrap",
-            }}>
+          <div className="flex gap-1.75 mt-3 flex-wrap">
             {r.tags.map((t) => (
               <span
                 key={t}
-                style={{
-                  background: "var(--cream-3)",
-                  color: "var(--ink-2)",
-                  padding: "4px 11px",
-                  borderRadius: 999,
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                }}>
+                className="bg-cream-3 text-ink-2 px-2.75 py-1 rounded-full text-xs font-semibold">
                 {t}
               </span>
             ))}
@@ -200,32 +118,15 @@ export function DetailScreen({
         )}
 
         {matched && (
-          <div
-            style={{
-              marginTop: 14,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              background: "rgba(30,158,106,0.1)",
-              borderRadius: 16,
-              padding: "10px 14px",
-            }}>
-            <div style={{ display: "flex" }}>
+          <div className="mt-3.5 flex items-center gap-2.5 bg-[rgba(30,158,106,0.1)] rounded-2xl px-3.5 py-2.5">
+            <div className="flex">
               {players.map((p, i) => (
-                <div key={p.id} style={{ marginLeft: i ? -9 : 0 }}>
+                <div key={p.id} className={cn(i ? "-ml-2.25" : "ml-0")}>
                   <Avatar p={p} size={30} />
                 </div>
               ))}
             </div>
-            <span
-              style={{
-                fontWeight: 600,
-                fontSize: 13.5,
-                color: "var(--good)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-              }}>
+            <span className="font-semibold text-[13.5px] text-good inline-flex items-center gap-1.25">
               ทั้ง {players.length} คนชอบร้านนี้
               <HeartIcon size={15} weight="fill" color="var(--coral)" />
             </span>
@@ -233,14 +134,7 @@ export function DetailScreen({
         )}
 
         {/* info rows */}
-        <div
-          style={{
-            marginTop: 16,
-            background: "#fff",
-            borderRadius: 20,
-            padding: "4px 16px",
-            boxShadow: "var(--sh-card)",
-          }}>
+        <div className="mt-4 bg-white rounded-md px-4 py-1 shadow-card">
           <InfoRow
             icon={
               <ClockIcon
@@ -251,10 +145,7 @@ export function DetailScreen({
             }
             main={
               <span
-                style={{
-                  color: r.open ? "var(--good)" : "var(--cta)",
-                  fontWeight: 700,
-                }}>
+                className={cn("font-bold", r.open ? "text-good" : "text-cta")}>
                 {r.open ? "เปิดอยู่ตอนนี้" : "ปิดอยู่"}
               </span>
             }
@@ -269,7 +160,7 @@ export function DetailScreen({
         </div>
 
         {/* secondary actions */}
-        <div style={{ marginTop: 14, display: "flex", gap: 10 }}>
+        <div className="mt-3.5 flex gap-2.5">
           <MiniAction
             label="โทร"
             disabled={!r.phone}
@@ -311,28 +202,18 @@ export function DetailScreen({
 
         {/* map preview */}
         {MAPS_KEY ? (
-          <div
-            style={{
-              position: "relative",
-              marginTop: 14,
-              width: "100%",
-              height: 120,
-              borderRadius: 18,
-              overflow: "hidden",
-            }}>
+          <div className="relative mt-3.5 w-full h-30 rounded-[18px] overflow-hidden">
             <Image
               src={staticMapSrc(r)}
               alt={`แผนที่ตำแหน่ง ${r.name}`}
               fill
               unoptimized
               sizes="430px"
-              style={{ objectFit: "cover" }}
+              className="object-cover"
             />
           </div>
         ) : (
-          <div
-            className="rm-ph"
-            style={{ marginTop: 14, height: 120, borderRadius: 18 }}>
+          <div className="rm-ph mt-3.5 h-30 rounded-[18px]">
             <span className="rm-ph-label">map preview · {r.addr}</span>
           </div>
         )}
@@ -340,61 +221,28 @@ export function DetailScreen({
         <SecondaryButton
           onClick={onAgain}
           ariaLabel="เริ่มรอบใหม่"
-          style={{ marginTop: 14, minHeight: 50, fontSize: 16 }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}>
+          className="mt-3.5 min-h-12.5 text-base">
+          <span className="inline-flex items-center justify-center gap-1.5">
             <ArrowsClockwiseIcon size={18} weight="bold" /> เริ่มรอบใหม่
           </span>
         </SecondaryButton>
         <button
-          className="rm-tap font-display"
-          onClick={onHome}
-          style={{
-            width: "100%",
-            marginTop: 8,
-            background: "transparent",
-            border: "none",
-            color: "var(--ink-3)",
-            fontWeight: 500,
-            fontSize: 13.5,
-            cursor: "pointer",
-            padding: "6px 8px",
-          }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 6,
-            }}>
+          className="rm-tap font-display w-full mt-2 bg-transparent border-none text-ink-3 font-medium text-[13.5px] cursor-pointer px-2 py-1.5"
+          onClick={onHome}>
+          <span className="inline-flex items-center justify-center gap-1.5">
             <ArrowLeftIcon size={16} weight="bold" /> กลับหน้าหลัก
           </span>
         </button>
       </div>
 
       {/* thumb-zone main CTA */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "12px 24px max(20px, env(safe-area-inset-bottom))",
-        }}>
+      <div className="shrink-0 px-6 pt-3 pb-[max(20px,env(safe-area-inset-bottom))]">
         <PrimaryButton
           color="linear-gradient(180deg,#FF6B4A,#E63946)"
           onClick={() =>
             window.open(mapsDirLink(r), "_blank", "noopener,noreferrer")
           }>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}>
+          <span className="inline-flex items-center justify-center gap-2">
             ไปกันเลย <NavigationArrowIcon size={20} weight="bold" />
           </span>
         </PrimaryButton>
@@ -432,42 +280,24 @@ function OpeningHours({ hours }: { hours: string }) {
 
   return (
     <div>
-      <span
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 8,
-          flexWrap: "wrap",
-        }}>
+      <span className="inline-flex items-center gap-2 flex-wrap">
         วันนี้ {todayHours}
         <button
-          className="rm-tap"
-          onClick={() => setOpen((v) => !v)}
-          style={{
-            border: "none",
-            background: "transparent",
-            padding: 0,
-            cursor: "pointer",
-            color: "var(--coral)",
-            fontSize: 12.5,
-            fontWeight: 600,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 3,
-          }}>
+          className="rm-tap border-none bg-transparent p-0 cursor-pointer text-coral text-xs font-semibold inline-flex items-center gap-0.75"
+          onClick={() => setOpen((v) => !v)}>
           ดูทั้งสัปดาห์
           <CaretDownIcon
             size={12}
             weight="bold"
-            style={{
-              transition: "transform .15s",
-              transform: open ? "rotate(180deg)" : "none",
-            }}
+            className={cn(
+              "transition-transform duration-150",
+              open && "rotate-180",
+            )}
           />
         </button>
       </span>
       {open && (
-        <div style={{ marginTop: 6, display: "grid", gap: 3 }}>
+        <div className="mt-1.5 grid gap-0.75">
           {week.map((d, i) => {
             const sep = d.indexOf(": ");
             const day = sep >= 0 ? d.slice(0, sep) : d;
@@ -475,13 +305,12 @@ function OpeningHours({ hours }: { hours: string }) {
             return (
               <div
                 key={d}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: 12,
-                  color: i === todayIdx ? "var(--ink)" : "var(--ink-3)",
-                  fontWeight: i === todayIdx ? 700 : 400,
-                }}>
+                className={cn(
+                  "flex justify-between gap-3",
+                  i === todayIdx
+                    ? "text-ink font-bold"
+                    : "text-ink-3 font-normal",
+                )}>
                 <span>{day}</span>
                 <span>{time}</span>
               </div>
@@ -506,40 +335,22 @@ function MiniAction({
 }) {
   return (
     <button
-      className={disabled ? undefined : "rm-tap"}
+      className={cn(
+        !disabled && "rm-tap",
+        "flex-1 border-none bg-white rounded-[18px] px-1 py-3 shadow-soft flex flex-col items-center gap-1.5",
+        disabled ? "cursor-not-allowed opacity-45" : "cursor-pointer opacity-100",
+      )}
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
-      aria-label={label}
-      style={{
-        flex: 1,
-        border: "none",
-        background: "#fff",
-        borderRadius: 18,
-        padding: "12px 4px",
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.45 : 1,
-        boxShadow: "var(--sh-soft)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 6,
-      }}>
+      aria-label={label}>
       <span
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
-          background: "var(--cream-3)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: disabled ? "var(--ink-3)" : "var(--cta)",
-        }}>
+        className={cn(
+          "w-10 h-10 rounded-[12px] bg-cream-3 flex items-center justify-center",
+          disabled ? "text-ink-3" : "text-cta",
+        )}>
         {icon}
       </span>
-      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-2)" }}>
-        {label}
-      </span>
+      <span className="text-xs font-semibold text-ink-2">{label}</span>
     </button>
   );
 }
@@ -557,21 +368,14 @@ function InfoRow({
 }) {
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 13,
-        padding: "12px 0",
-        borderBottom: last ? "none" : "1px solid var(--line)",
-      }}>
-      <span style={{ fontSize: 20, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+      className={cn(
+        "flex items-start gap-3.25 py-3",
+        last ? "border-b-0" : "border-b border-line",
+      )}>
+      <span className="text-xl shrink-0 mt-px">{icon}</span>
       <div>
-        <div style={{ fontSize: 14.5, color: "var(--ink)", fontWeight: 500 }}>
-          {main}
-        </div>
-        {sub && (
-          <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{sub}</div>
-        )}
+        <div className="text-[14.5px] text-ink font-medium">{main}</div>
+        {sub && <div className="text-xs text-ink-3">{sub}</div>}
       </div>
     </div>
   );

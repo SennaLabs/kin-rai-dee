@@ -3,6 +3,7 @@
 import { useRef, type CSSProperties, type ReactNode } from "react";
 import { HeartIcon, XIcon } from "@phosphor-icons/react";
 import { buzz } from "./motion";
+import { cn } from "@/lib/utils/cn";
 
 type PrimaryButtonProps = {
   children: ReactNode;
@@ -12,6 +13,7 @@ type PrimaryButtonProps = {
   color?: string;
   style?: CSSProperties;
   ariaLabel?: string;
+  className?: string;
 };
 
 /** Full-width pill CTA with a tactile press + ripple. */
@@ -22,6 +24,7 @@ export function PrimaryButton({
   color,
   style,
   ariaLabel,
+  className,
 }: PrimaryButtonProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const bg =
@@ -47,7 +50,14 @@ export function PrimaryButton({
   return (
     <button
       ref={ref}
-      className="rm-btn rm-tap font-display"
+      className={cn(
+        "rm-btn rm-tap font-display",
+        "relative overflow-hidden w-full min-h-14.5 rounded-pill font-semibold text-[19px] transition-[transform,filter] duration-150 ease-[cubic-bezier(.34,1.56,.64,1)]",
+        disabled
+          ? "text-[#B49A8E] cursor-not-allowed"
+          : "text-white shadow-btn cursor-pointer active:scale-[0.955]",
+        className
+      )}
       aria-label={ariaLabel}
       onClick={(e) => {
         ripple(e);
@@ -55,29 +65,8 @@ export function PrimaryButton({
       }}
       disabled={disabled}
       style={{
-        position: "relative",
-        overflow: "hidden",
-        border: "none",
-        width: "100%",
-        minHeight: 58,
-        borderRadius: "var(--r-pill)",
         background: disabled ? "#E7D5CB" : bg,
-        color: disabled ? "#B49A8E" : "#fff",
-        fontWeight: 600,
-        fontSize: 19,
-        boxShadow: disabled ? "none" : "var(--sh-btn)",
-        cursor: disabled ? "not-allowed" : "pointer",
-        transition: "transform .12s cubic-bezier(.34,1.56,.64,1), filter .15s",
         ...style,
-      }}
-      onPointerDown={(e) => {
-        if (!disabled) e.currentTarget.style.transform = "scale(0.955)";
-      }}
-      onPointerUp={(e) => {
-        e.currentTarget.style.transform = "scale(1)";
-      }}
-      onPointerLeave={(e) => {
-        e.currentTarget.style.transform = "scale(1)";
       }}
     >
       {children}
@@ -90,6 +79,7 @@ type SecondaryButtonProps = {
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   style?: CSSProperties;
   ariaLabel?: string;
+  className?: string;
 };
 
 /** Outlined pill — secondary action. */
@@ -98,31 +88,21 @@ export function SecondaryButton({
   onClick,
   style,
   ariaLabel,
+  className,
 }: SecondaryButtonProps) {
   return (
     <button
-      className="rm-btn rm-tap font-display"
+      className={cn(
+        "rm-btn rm-tap font-display",
+        "w-full min-h-14 rounded-pill bg-white/65 text-cta border-2 border-coral font-semibold text-lg cursor-pointer transition-transform duration-150 ease-[cubic-bezier(.34,1.56,.64,1)] active:scale-[0.96]",
+        className
+      )}
       aria-label={ariaLabel}
       onClick={(e) => {
         buzz(10);
         onClick?.(e);
       }}
-      style={{
-        width: "100%",
-        minHeight: 56,
-        borderRadius: "var(--r-pill)",
-        background: "rgba(255,255,255,0.65)",
-        color: "var(--cta)",
-        border: "2px solid var(--coral)",
-        fontWeight: 600,
-        fontSize: 18,
-        cursor: "pointer",
-        transition: "transform .12s cubic-bezier(.34,1.56,.64,1)",
-        ...style,
-      }}
-      onPointerDown={(e) => (e.currentTarget.style.transform = "scale(0.96)")}
-      onPointerUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      onPointerLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
+      style={style}
     >
       {children}
     </button>
@@ -141,7 +121,13 @@ export function RoundButton({ kind, onClick, size = 66, big }: RoundButtonProps)
   const like = kind === "like";
   return (
     <button
-      className="rm-btn rm-tap"
+      className={cn(
+        "rm-btn rm-tap",
+        "rounded-full shrink-0 flex items-center justify-center cursor-pointer transition-transform duration-150 ease-[cubic-bezier(.34,1.7,.6,1)] active:scale-[0.88]",
+        like
+          ? "bg-[linear-gradient(180deg,#FF6B4A,#E63946)] text-white shadow-[0_10px_22px_rgba(230,57,70,0.36)]"
+          : "bg-white text-pass shadow-[0_8px_20px_rgba(43,27,23,0.16)]"
+      )}
       onClick={(e) => {
         buzz(16);
         onClick?.(e);
@@ -150,26 +136,7 @@ export function RoundButton({ kind, onClick, size = 66, big }: RoundButtonProps)
       style={{
         width: big ? 74 : size,
         height: big ? 74 : size,
-        borderRadius: "50%",
-        border: "none",
-        cursor: "pointer",
-        flexShrink: 0,
-        background: like
-          ? "linear-gradient(180deg,#FF6B4A,#E63946)"
-          : "#FFFFFF",
-        color: like ? "#fff" : "var(--pass)",
-        boxShadow: like
-          ? "0 10px 22px rgba(230,57,70,0.36)"
-          : "0 8px 20px rgba(43,27,23,0.16)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "transform .14s cubic-bezier(.34,1.7,.6,1)",
-        fontSize: big ? 32 : 28,
       }}
-      onPointerDown={(e) => (e.currentTarget.style.transform = "scale(0.88)")}
-      onPointerUp={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      onPointerLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
     >
       {like ? (
         <HeartIcon size={big ? 34 : 30} weight="fill" />
@@ -185,30 +152,24 @@ type ChipProps = {
   active?: boolean;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
   style?: CSSProperties;
+  className?: string;
 };
 
 /** Toggleable filter chip. */
-export function Chip({ children, active, onClick, style }: ChipProps) {
+export function Chip({ children, active, onClick, style, className }: ChipProps) {
   return (
     <button
-      className="rm-tap font-body"
+      className={cn(
+        "rm-tap font-body",
+        "px-4 py-2.5 rounded-pill cursor-pointer font-semibold text-sm transition-all duration-150 whitespace-nowrap",
+        active
+          ? "border-2 border-coral bg-coral text-white"
+          : "border-2 border-line-strong bg-white text-ink-2",
+        className
+      )}
       onClick={onClick}
       aria-pressed={!!active}
-      style={{
-        padding: "9px 15px",
-        borderRadius: "var(--r-pill)",
-        cursor: "pointer",
-        fontWeight: 600,
-        fontSize: 14,
-        border: active
-          ? "2px solid var(--coral)"
-          : "2px solid var(--line-strong)",
-        background: active ? "var(--coral)" : "#fff",
-        color: active ? "#fff" : "var(--ink-2)",
-        transition: "all .15s",
-        whiteSpace: "nowrap",
-        ...style,
-      }}
+      style={style}
     >
       {children}
     </button>

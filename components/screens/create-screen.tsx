@@ -8,6 +8,7 @@ import { Chip, PrimaryButton } from "@/components/ui/buttons";
 import { Screen } from "@/components/ui/screen";
 import { FOOD_PLACE_TYPE_OPTIONS, priceStr } from "@/lib/data";
 import type { RoomFilters } from "@/lib/types";
+import { cn } from "@/lib/utils/cn";
 
 type CreateScreenProps = {
   onBack: () => void;
@@ -72,104 +73,39 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
   return (
     <Screen bg="var(--cream-2)">
       <BackHeader title="สร้างห้อง" onBack={onBack} />
-      <div
-        style={{
-          flex: 1,
-          overflow: "auto",
-          padding: "6px 18px 16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-        }}
-      >
+      <div className="flex-1 overflow-auto px-4.5 pt-1.5 pb-4 flex flex-col gap-3.5">
         {/* location */}
         <SettingCard title="ตำแหน่ง">
           <button
-            className="rm-tap"
+            className="rm-tap w-full flex items-center gap-3 p-3 rounded-2xl border-2 border-coral bg-[rgba(255,90,60,0.06)] cursor-pointer text-left"
             onClick={() => setGeoRequest((n) => n + 1)}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: 12,
-              borderRadius: 16,
-              border: "2px solid var(--coral)",
-              background: "rgba(255,90,60,0.06)",
-              cursor: "pointer",
-              textAlign: "left",
-            }}
           >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                background: "linear-gradient(150deg,#FF7A5E,#E63946)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 20,
-                flexShrink: 0,
-              }}
-            >
+            <div className="w-10 h-10 rounded-xl bg-[linear-gradient(150deg,#FF7A5E,#E63946)] flex items-center justify-center shrink-0">
               <MapPinIcon size={22} weight="fill" color="#fff" />
             </div>
-            <div style={{ flex: 1 }}>
-              <div
-                className="font-display"
-                style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}
-              >
+            <div className="flex-1">
+              <div className="font-display text-[15px] font-semibold text-ink">
                 ใช้ตำแหน่งปัจจุบัน
               </div>
-              <div style={{ fontSize: 12.5, color: geoError ? "var(--cta)" : "var(--ink-3)" }}>
+              <div className={cn("text-xs", geoError ? "text-cta" : "text-ink-3")}>
                 {geoLabel}
               </div>
             </div>
             {coords && <Check />}
           </button>
           <button
-            className="rm-tap"
+            className="rm-tap w-full mt-2 flex items-center gap-3 p-3 rounded-2xl border-2 border-dashed border-line-strong bg-[rgba(255,255,255,0.58)] cursor-not-allowed text-left opacity-[0.58]"
             disabled
             aria-disabled="true"
-            style={{
-              width: "100%",
-              marginTop: 8,
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: 12,
-              borderRadius: 16,
-              border: "2px dashed var(--line-strong)",
-              background: "rgba(255,255,255,0.58)",
-              cursor: "not-allowed",
-              textAlign: "left",
-              opacity: 0.58,
-            }}
           >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 12,
-                background: "var(--cream-3)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 20,
-                flexShrink: 0,
-              }}
-            >
+            <div className="w-10 h-10 rounded-xl bg-cream-3 flex items-center justify-center shrink-0">
               <MagnifyingGlassIcon size={22} weight="bold" color="var(--ink-2)" />
             </div>
-            <div style={{ flex: 1 }}>
-              <div
-                className="font-display"
-                style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}
-              >
+            <div className="flex-1">
+              <div className="font-display text-[15px] font-semibold text-ink">
                 พิมพ์ค้นหา / ปักหมุด
               </div>
-              <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
+              <div className="text-xs text-ink-3">
                 ฟีเจอร์ในอนาคต
               </div>
             </div>
@@ -185,18 +121,11 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
             step="0.5"
             value={radius}
             onChange={(e) => setRadius(+e.target.value)}
-            className="rm-focusable"
+            className="rm-focusable w-full h-7"
             aria-label="รัศมีค้นหา (กิโลเมตร)"
-            style={{ width: "100%", accentColor: "var(--coral)", height: 28 }}
+            style={{ accentColor: "var(--coral)" }}
           />
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: 11,
-              color: "var(--ink-3)",
-            }}
-          >
+          <div className="flex justify-between text-[11px] text-ink-3">
             <span>ใกล้ๆ</span>
             <span>ไกลหน่อย</span>
           </div>
@@ -204,13 +133,13 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
 
         {/* price */}
         <SettingCard title="ช่วงราคา">
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex gap-2">
             {[1, 2, 3, 4].map((n) => (
               <Chip
                 key={n}
                 active={price.includes(n)}
                 onClick={() => togglePrice(n)}
-                style={{ flex: 1, fontFamily: "var(--font-display)", fontSize: 15 }}
+                className="flex-1 font-display text-[15px]"
               >
                 {priceStr(n)}
               </Chip>
@@ -221,9 +150,9 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
         {/* cuisines */}
         <SettingCard
           title="ประเภทอาหาร"
-          hint={cuisines.length ? `${cuisines.length} type` : "ทุกประเภทอาหาร"}
+          hint={cuisines.length ? `${cuisines.length} ประเภท` : "ทุกประเภทอาหาร"}
         >
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div className="flex flex-wrap gap-2">
             {FOOD_PLACE_TYPE_OPTIONS.map((option) => (
               <Chip
                 key={option.type}
@@ -237,25 +166,12 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
         </SettingCard>
 
         {/* open now toggle */}
-        <div
-          style={{
-            background: "#fff",
-            borderRadius: 22,
-            padding: "14px 16px",
-            boxShadow: "var(--sh-card)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
+        <div className="bg-white rounded-[22px] px-4 py-3.5 shadow-card flex items-center justify-between">
           <div>
-            <div
-              className="font-display"
-              style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}
-            >
+            <div className="font-display text-base font-semibold text-ink">
               เปิดอยู่ตอนนี้
             </div>
-            <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
+            <div className="text-xs text-ink-3">
               โชว์เฉพาะร้านที่เปิดอยู่
             </div>
           </div>
@@ -263,22 +179,9 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
         </div>
       </div>
 
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "12px 24px max(20px, env(safe-area-inset-bottom))",
-        }}
-      >
+      <div className="shrink-0 px-6 pt-3 pb-[max(20px,env(safe-area-inset-bottom))]">
         {(error || geoError) && (
-          <p
-            style={{
-              margin: "0 0 10px",
-              fontSize: 13.5,
-              color: "var(--cta)",
-              textAlign: "center",
-              fontWeight: 600,
-            }}
-          >
+          <p className="m-0 mb-2.5 text-[13.5px] text-cta text-center font-semibold">
             {error ?? geoError}
           </p>
         )}
@@ -306,30 +209,13 @@ function SettingCard({
   hint?: string;
 }) {
   return (
-    <div
-      style={{
-        background: "#fff",
-        borderRadius: 22,
-        padding: "16px 16px",
-        boxShadow: "var(--sh-card)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          marginBottom: 12,
-        }}
-      >
-        <span
-          className="font-display"
-          style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}
-        >
+    <div className="bg-white rounded-[22px] p-4 shadow-card">
+      <div className="flex items-baseline justify-between mb-3">
+        <span className="font-display text-base font-semibold text-ink">
           {title}
         </span>
         {hint && (
-          <span style={{ fontSize: 12.5, color: "var(--ink-3)" }}>{hint}</span>
+          <span className="text-xs text-ink-3">{hint}</span>
         )}
       </div>
       {children}
@@ -339,18 +225,7 @@ function SettingCard({
 
 function Check() {
   return (
-    <span
-      style={{
-        width: 24,
-        height: 24,
-        borderRadius: "50%",
-        background: "var(--coral)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        flexShrink: 0,
-      }}
-    >
+    <span className="w-6 h-6 rounded-full bg-coral flex items-center justify-center shrink-0">
       <CheckIcon size={14} weight="bold" color="#fff" />
     </span>
   );
@@ -362,31 +237,16 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
       role="switch"
       aria-checked={on}
       onClick={onChange}
-      className="rm-tap"
-      style={{
-        width: 54,
-        height: 32,
-        borderRadius: 999,
-        border: "none",
-        cursor: "pointer",
-        background: on ? "var(--good)" : "#D8C9C0",
-        position: "relative",
-        transition: "background .2s",
-        flexShrink: 0,
-      }}
+      className={cn(
+        "rm-tap w-13.5 h-8 rounded-full border-none cursor-pointer relative transition-colors duration-200 shrink-0",
+        on ? "bg-good" : "bg-[#D8C9C0]"
+      )}
     >
       <span
-        style={{
-          position: "absolute",
-          top: 3,
-          left: on ? 25 : 3,
-          width: 26,
-          height: 26,
-          borderRadius: "50%",
-          background: "#fff",
-          boxShadow: "0 2px 5px rgba(0,0,0,0.2)",
-          transition: "left .2s cubic-bezier(.34,1.5,.5,1)",
-        }}
+        className={cn(
+          "absolute top-0.75 w-6.5 h-6.5 rounded-full bg-white shadow-[0_2px_5px_rgba(0,0,0,0.2)] transition-[left] duration-200 ease-[cubic-bezier(.34,1.5,.5,1)]",
+          on ? "left-6.25" : "left-0.75"
+        )}
       />
     </button>
   );

@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { CheckIcon } from "@phosphor-icons/react";
 import { avatars } from "@/assets/avatars";
+import { cn } from "@/lib/utils/cn";
 import type { Player } from "@/lib/types";
 
 const avatarById = new Map(avatars.map((a) => [String(a.id), a.Component]));
@@ -18,39 +19,22 @@ type AvatarProps = {
   joinPop?: boolean;
 };
 
-/** Player avatar bubble with online-presence dot. */
 export function Avatar({ p, size = 40, dim, ring, check, joinPop }: AvatarProps) {
   const AvatarSvg = avatarById.get(p.emoji);
   return (
     <div
-      style={{
-        position: "relative",
-        width: size,
-        height: size,
-        flexShrink: 0,
-        animation: joinPop ? "rmPop .5s cubic-bezier(.34,1.7,.5,1)" : undefined,
-      }}
+      className={cn("relative shrink-0", joinPop && "animate-[rmPop_.5s_cubic-bezier(.34,1.7,.5,1)]")}
+      style={{ width: size, height: size }}
     >
       <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: "50%",
-          overflow: "hidden",
-          background: p.me
-            ? "linear-gradient(150deg,#FFE0B2,#FFC845)"
-            : "#fff",
-          border: ring
-            ? "2.5px solid var(--coral)"
-            : "2px solid rgba(255,255,255,0.9)",
-          boxShadow: "0 3px 8px rgba(43,27,23,0.14)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: size * 0.52,
-          opacity: dim ? 0.42 : 1,
-          transition: "opacity .3s",
-        }}
+        className={cn(
+          "rounded-full overflow-hidden flex items-center justify-center transition-opacity duration-300",
+          "shadow-[0_3px_8px_rgba(43,27,23,0.14)]",
+          p.me ? "bg-[linear-gradient(150deg,#FFE0B2,#FFC845)]" : "bg-white",
+          ring ? "border-[2.5px] border-coral" : "border-2 border-white/90",
+          dim ? "opacity-[0.42]" : "opacity-100",
+        )}
+        style={{ width: size, height: size, fontSize: size * 0.52 }}
       >
         {AvatarSvg
           ? createElement(AvatarSvg, {
@@ -60,38 +44,12 @@ export function Avatar({ p, size = 40, dim, ring, check, joinPop }: AvatarProps)
             })
           : p.emoji}
       </div>
-      {/* presence dot */}
       <span
-        style={{
-          position: "absolute",
-          right: -1,
-          bottom: -1,
-          width: size * 0.28,
-          height: size * 0.28,
-          minWidth: 10,
-          minHeight: 10,
-          borderRadius: "50%",
-          background: "var(--good)",
-          border: "2px solid var(--cream)",
-        }}
+        className="absolute -right-px -bottom-px min-w-2.5 min-h-2.5 rounded-full bg-good border-2 border-cream"
+        style={{ width: size * 0.28, height: size * 0.28 }}
       />
       {check && (
-        <span
-          style={{
-            position: "absolute",
-            right: -4,
-            top: -4,
-            width: 18,
-            height: 18,
-            borderRadius: "50%",
-            background: "var(--good)",
-            border: "2px solid #fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            animation: "rmPop .4s ease",
-          }}
-        >
+        <span className="absolute -right-1 -top-1 w-4.5 h-4.5 rounded-full bg-good border-2 border-white flex items-center justify-center animate-pop">
           <CheckIcon size={10} weight="bold" color="#fff" />
         </span>
       )}

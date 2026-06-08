@@ -3,6 +3,7 @@
 import { ArrowsClockwiseIcon, SlidersHorizontalIcon } from "@phosphor-icons/react";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { Screen } from "@/components/ui/screen";
+import { cn } from "@/lib/utils/cn";
 import type { Player } from "@/lib/types";
 
 type NoMatchScreenProps = {
@@ -22,69 +23,24 @@ export function NoMatchScreen({
 }: NoMatchScreenProps) {
   return (
     <Screen bg="var(--cream-2)">
-      <div style={{ flexShrink: 0, padding: "60px 24px 0", textAlign: "center" }}>
-        <div
-          style={{
-            fontSize: 54,
-            animation: reduced ? "none" : "rmFloat 3.4s ease-in-out infinite",
-          }}
-        >
+      <div className="shrink-0 pt-15 px-6 pb-0 text-center">
+        <div className={cn("text-[54px]", !reduced && "animate-[rmFloat_3.4s_ease-in-out_infinite]")}>
           🫥
         </div>
-        <h1
-          className="font-display"
-          style={{
-            margin: "12px 0 0",
-            fontSize: 26,
-            fontWeight: 700,
-            color: "var(--ink)",
-            lineHeight: 1.2,
-          }}
-        >
+        <h1 className="font-display mt-3 text-[26px] font-bold text-ink leading-[1.2]">
           ยังไม่มีร้านที่ทุกคนถูกใจตรงกัน
         </h1>
-        <p
-          style={{
-            margin: "8px 0 0",
-            fontSize: 15,
-            color: "var(--ink-2)",
-            lineHeight: 1.45,
-          }}
-        >
+        <p className="mt-2 text-sm text-ink-2 leading-[1.45]">
           ทุกคนปัดครบแล้ว แต่ยังไม่มีร้านไหนได้ใจใครเลย
         </p>
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "18px 28px",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            flexWrap: "wrap",
-          }}
-        >
+      <div className="flex-1 flex items-center justify-center py-4.5 px-7">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           {players.map((p) => (
             <span
               key={p.id}
-              style={{
-                background: "#fff",
-                borderRadius: 999,
-                padding: "7px 12px",
-                boxShadow: "var(--sh-card)",
-                color: "var(--ink-2)",
-                fontWeight: 700,
-                fontSize: 13,
-              }}
+              className="bg-white rounded-full py-1.75 px-3 shadow-card text-ink-2 font-bold text-[13px]"
             >
               {p.emoji} {p.name}
             </span>
@@ -92,48 +48,21 @@ export function NoMatchScreen({
         </div>
       </div>
 
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "12px 24px max(20px, env(safe-area-inset-bottom))",
-          display: "flex",
-          flexDirection: "column",
-          gap: 10,
-        }}
-      >
+      <div className="shrink-0 pt-3 px-6 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col gap-2.5">
         <PrimaryButton onClick={onNewGame}>เริ่มเกมใหม่</PrimaryButton>
         <button
-          className="rm-tap font-display"
+          className="rm-tap font-display min-h-12 rounded-pill bg-white border-2 border-line-strong text-ink font-bold text-sm cursor-pointer"
           onClick={onRegenerate}
-          style={{
-            minHeight: 48,
-            borderRadius: "var(--r-pill)",
-            background: "#fff",
-            border: "2px solid var(--line-strong)",
-            color: "var(--ink)",
-            fontWeight: 700,
-            fontSize: 15,
-            cursor: "pointer",
-          }}
         >
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <span className="inline-flex items-center justify-center gap-2">
             สุ่มร้านชุดใหม่ <ArrowsClockwiseIcon size={18} weight="bold" />
           </span>
         </button>
         <button
-          className="rm-tap font-display"
+          className="rm-tap font-display bg-transparent border-none text-ink-2 font-medium text-[14.5px] cursor-pointer p-1.5"
           onClick={onAdjust}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "var(--ink-2)",
-            fontWeight: 500,
-            fontSize: 14.5,
-            cursor: "pointer",
-            padding: 6,
-          }}
         >
-          <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+          <span className="inline-flex items-center justify-center gap-1.75">
             ปรับเงื่อนไขแล้วลองใหม่ <SlidersHorizontalIcon size={17} weight="bold" />
           </span>
         </button>

@@ -15,6 +15,7 @@ import { foodTypeLabel, priceStr } from "@/lib/data";
 import { authService } from "@/lib/services/auth.service";
 import { restaurantService } from "@/lib/services/restaurant.service";
 import { roomService } from "@/lib/services/room.service";
+import { cn } from "@/lib/utils/cn";
 import type { GameState, Player, RankedResult, Restaurant, RoomFilters } from "@/lib/types";
 
 type PreScreen = "home" | "create" | "join";
@@ -394,25 +395,13 @@ export function RestaurantMatchApp({
   }
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: 430,
-        height: "100dvh",
-        margin: "0 auto",
-        overflow: "hidden",
-        position: "relative",
-      }}
-    >
+    <div className="relative mx-auto h-[100dvh] w-full max-w-107.5 overflow-hidden">
       <div
         key={`${roomCode ?? preScreen}:${room?.status ?? ""}:${detailOpen}:${picked?.id ?? ""}`}
-        style={{
-          position: "relative",
-          height: "100%",
-          animation: reduced
-            ? "rmFadeOnly .2s ease"
-            : "rmScreenIn .4s cubic-bezier(.4,0,.2,1)",
-        }}
+        className={cn(
+          "relative h-full",
+          reduced ? "animate-fade-only" : "animate-screen-in",
+        )}
       >
         {view}
       </div>
@@ -423,30 +412,9 @@ export function RestaurantMatchApp({
 function LoadingView({ label }: { label: string }) {
   return (
     <Screen bg="var(--cream-2)">
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 14,
-          color: "var(--ink-3)",
-        }}
-      >
-        <span
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: "50%",
-            border: "3px solid var(--line-strong)",
-            borderTopColor: "var(--cta)",
-            animation: "rmSpin .8s linear infinite",
-          }}
-        />
-        <span className="font-display" style={{ fontSize: 15, fontWeight: 600 }}>
-          {label}
-        </span>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3.5 text-ink-3">
+        <span className="h-8.5 w-8.5 rounded-full border-[3px] border-line-strong border-t-cta animate-[rmSpin_.8s_linear_infinite]" />
+        <span className="font-display text-sm font-semibold">{label}</span>
       </div>
     </Screen>
   );

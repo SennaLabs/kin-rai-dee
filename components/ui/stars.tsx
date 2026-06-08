@@ -20,29 +20,23 @@ type StarsProps = {
 /** Five-star rating with fractional fill. Decorative (aria-hidden). */
 export function Stars({ value, size = 14, color = "var(--amber)" }: StarsProps) {
   return (
-    <span
-      style={{ display: "inline-flex", gap: 1, verticalAlign: "middle" }}
-      aria-hidden="true"
-    >
+    <span className="inline-flex gap-px align-middle" aria-hidden="true">
       {[0, 1, 2, 3, 4].map((i) => {
         const fill = Math.max(0, Math.min(1, value - i));
         return (
           <span
             key={i}
+            className="relative inline-block"
             style={{
-              position: "relative",
               width: size,
               height: size,
-              display: "inline-block",
             }}
           >
             <Star size={size} color="rgba(43,27,23,0.15)" />
             <span
+              className="absolute inset-0 overflow-hidden"
               style={{
-                position: "absolute",
-                inset: 0,
                 width: `${fill * 100}%`,
-                overflow: "hidden",
               }}
             >
               <Star size={size} color={color} />

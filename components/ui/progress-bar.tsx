@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils/cn";
+
 type ProgressBarProps = {
   value: number;
   max: number;
@@ -9,25 +11,17 @@ export function ProgressBar({ value, max, color = "var(--coral)" }: ProgressBarP
   const pct = Math.round((value / max) * 100);
   return (
     <div
-      style={{
-        height: 7,
-        borderRadius: 999,
-        background: "rgba(43,27,23,0.10)",
-        overflow: "hidden",
-        width: "100%",
-      }}
+      className={cn("h-1.75 w-full rounded-full bg-line overflow-hidden")}
       role="progressbar"
       aria-valuenow={value}
       aria-valuemin={0}
       aria-valuemax={max}
     >
       <div
+        className={cn("h-full rounded-full transition-[width] duration-500 ease-in-out")}
         style={{
-          height: "100%",
           width: `${pct}%`,
           background: color,
-          borderRadius: 999,
-          transition: "width .5s cubic-bezier(.4,0,.2,1)",
         }}
       />
     </div>

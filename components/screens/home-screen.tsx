@@ -2,6 +2,7 @@
 
 import { PrimaryButton, SecondaryButton } from "@/components/ui/buttons";
 import { Screen } from "@/components/ui/screen";
+import { cn } from "@/lib/utils/cn";
 
 type HomeScreenProps = {
   onCreate: () => void;
@@ -30,21 +31,14 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
       {/* floating food emojis */}
       <div
         aria-hidden="true"
-        style={{
-          position: "absolute",
-          inset: 0,
-          overflow: "hidden",
-          pointerEvents: "none",
-        }}>
+        className="absolute inset-0 overflow-hidden pointer-events-none">
         {FLOATS.map(([e, l, t, d], i) => (
           <span
             key={i}
+            className="absolute text-[34px] opacity-50"
             style={{
-              position: "absolute",
               left: l,
               top: t,
-              fontSize: 34,
-              opacity: 0.5,
               animation: reduced
                 ? "none"
                 : `rmFloat ${4 + i * 0.4}s ease-in-out ${d}s infinite`,
@@ -54,56 +48,21 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
         ))}
       </div>
 
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "0 30px",
-          position: "relative",
-          zIndex: 2,
-        }}>
+      <div className="flex-1 flex flex-col items-center justify-center px-7.5 relative z-2">
         {/* mascot */}
         <div
-          style={{
-            width: 116,
-            height: 116,
-            borderRadius: 34,
-            background: "linear-gradient(150deg,#FF7A5E,#E63946)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: 62,
-            boxShadow: "0 18px 38px rgba(230,57,70,0.4)",
-            marginBottom: 22,
-            animation: reduced ? "none" : "rmFloat 3.6s ease-in-out infinite",
-          }}>
+          className={cn(
+            "w-29 h-29 rounded-[34px] bg-[linear-gradient(150deg,#FF7A5E,#E63946)] flex items-center justify-center text-[62px] shadow-[0_18px_38px_rgba(230,57,70,0.4)] mb-5.5",
+            !reduced && "animate-[rmFloat_3.6s_ease-in-out_infinite]"
+          )}>
           🍽️
         </div>
 
         <h1
-          className="font-display"
-          style={{
-            margin: 0,
-            fontSize: 46,
-            fontWeight: 700,
-            color: "var(--ink)",
-            lineHeight: 1.05,
-            textAlign: "center",
-          }}>
-          ไม่รู้<span style={{ color: "var(--cta)" }}>กินไร?</span>
+          className="font-display m-0 text-[46px] font-bold text-ink leading-[1.05] text-center">
+          ไม่รู้<span className="text-cta">กินไร?</span>
         </h1>
-        <p
-          style={{
-            margin: "14px 0 0",
-            fontSize: 16.5,
-            color: "var(--ink-2)",
-            textAlign: "center",
-            lineHeight: 1.45,
-            maxWidth: 300,
-          }}>
+        <p className="mt-3.5 text-[16.5px] text-ink-2 text-center leading-[1.45] max-w-75">
           เถียงกันทุกวันว่าจะกินไหน
           <br />
           มาปัดหาร้านพร้อมกัน จบในห้องเดียว
@@ -111,67 +70,25 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
       </div>
 
       {/* how it works */}
-      <div style={{ padding: "0 30px 4px", position: "relative", zIndex: 2 }}>
-        <div style={{ position: "relative", display: "flex" }}>
+      <div className="px-7.5 pt-0 pb-1 relative z-2">
+        <div className="relative flex">
           {/* dashed connector behind the step badges */}
           <div
             aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: 16,
-              left: "16.667%",
-              right: "16.667%",
-              borderTop: "2px dashed rgba(255,90,60,0.32)",
-              zIndex: 0,
-            }}
+            className="absolute top-4 left-[16.667%] right-[16.667%] border-t-2 border-dashed border-[rgba(255,90,60,0.32)] z-0"
           />
           {STEPS.map((s, i) => (
             <div
               key={i}
-              style={{
-                flex: 1,
-                position: "relative",
-                zIndex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-              }}>
+              className="flex-1 relative z-1 flex flex-col items-center text-center">
               <div
-                className="font-display"
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: "50%",
-                  background: "var(--cream)",
-                  border: "2px solid var(--coral)",
-                  color: "var(--cta)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 17,
-                  fontWeight: 700,
-                }}>
+                className="font-display w-8.5 h-8.5 rounded-full bg-cream border-2 border-coral text-cta flex items-center justify-center text-[17px] font-bold">
                 {i + 1}
               </div>
-              <div
-                className="font-display"
-                style={{
-                  fontSize: 13.5,
-                  fontWeight: 600,
-                  color: "var(--ink)",
-                  marginTop: 8,
-                }}>
+              <div className="font-display text-[13.5px] font-semibold text-ink mt-2">
                 {s.t}
               </div>
-              <div
-                style={{
-                  fontSize: 10.5,
-                  color: "var(--ink-3)",
-                  marginTop: 2,
-                  lineHeight: 1.25,
-                  maxWidth: 92,
-                }}>
+              <div className="text-[10.5px] text-ink-3 mt-0.5 leading-tight max-w-23">
                 {s.d}
               </div>
             </div>
@@ -180,16 +97,7 @@ export function HomeScreen({ onCreate, onJoin, reduced }: HomeScreenProps) {
       </div>
 
       {/* thumb-zone CTAs */}
-      <div
-        style={{
-          flexShrink: 0,
-          padding: "16px 24px max(20px, env(safe-area-inset-bottom))",
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
-          position: "relative",
-          zIndex: 2,
-        }}>
+      <div className="shrink-0 pt-4 px-6 pb-[max(20px,env(safe-area-inset-bottom))] flex flex-col gap-3 relative z-2">
         <PrimaryButton onClick={onCreate}>สร้างห้อง</PrimaryButton>
         <SecondaryButton onClick={onJoin}>เข้าร่วมห้อง</SecondaryButton>
       </div>

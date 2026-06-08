@@ -73,6 +73,9 @@
   --radius-lg: var(--r-lg);
   --radius-xl: var(--r-xl);
   --radius-pill: var(--r-pill);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
 }
 
 /*
@@ -84,6 +87,30 @@
 @theme {
   --font-display: var(--font-mitr), "Mitr", sans-serif;
   --font-body: var(--font-sarabun), "Sarabun", sans-serif;
+}
+
+/*
+ * Shadows + named animations exposed to Tailwind so utilities like
+ * `shadow-card` and `animate-pop` are available. The `@keyframes rm*`
+ * stay defined below (plain CSS) — the browser resolves them by name.
+ * Call sites that need a different duration/easing use an arbitrary
+ * value, e.g. `animate-[rmPop_.5s_cubic-bezier(.34,1.7,.5,1)]`.
+ */
+@theme {
+  --shadow-card: 0 10px 30px rgba(43, 27, 23, 0.12), 0 2px 6px rgba(43, 27, 23, 0.06);
+  --shadow-soft: 0 6px 18px rgba(43, 27, 23, 0.1);
+  --shadow-btn: 0 8px 18px rgba(230, 57, 70, 0.32);
+  --shadow-pop: 0 18px 50px rgba(43, 27, 23, 0.22);
+
+  --animate-pop: rmPop 0.4s ease;
+  --animate-drop-in: rmDropIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-rise: rmRise 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-bounce-in: rmBounceIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --animate-pulse-ring: rmPulseRing 1.4s ease-out infinite;
+  --animate-heartbeat: rmHeartbeat 1.2s ease-in-out infinite;
+  --animate-float: rmFloat 3s ease-in-out infinite;
+  --animate-screen-in: rmScreenIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --animate-fade-only: rmFadeOnly 0.2s ease;
 }
 
 * {
