@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type CSSProperties, type ReactNode } from "react";
+import { HeartIcon, XIcon } from "@phosphor-icons/react";
 import { buzz } from "./motion";
 
 type PrimaryButtonProps = {
@@ -171,26 +172,9 @@ export function RoundButton({ kind, onClick, size = 66, big }: RoundButtonProps)
       onPointerLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
     >
       {like ? (
-        <svg
-          width={big ? 34 : 30}
-          height={big ? 34 : 30}
-          viewBox="0 0 24 24"
-          fill="currentColor"
-        >
-          <path d="M12 21s-7.5-4.6-10-9.3C.4 8.4 2 5 5.3 5c2 0 3.4 1.1 4.2 2.3l.5.8.5-.8C11.3 6.1 12.7 5 14.7 5 18 5 19.6 8.4 18 11.7 15.5 16.4 12 21 12 21z" />
-        </svg>
+        <HeartIcon size={big ? 34 : 30} weight="fill" />
       ) : (
-        <svg
-          width={big ? 32 : 28}
-          height={big ? 32 : 28}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-        >
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
+        <XIcon size={big ? 32 : 28} weight="bold" />
       )}
     </button>
   );

@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { MagnifyingGlassIcon, MapPinIcon } from "@phosphor-icons/react";
+import { CheckIcon, MagnifyingGlassIcon, MapPinIcon } from "@phosphor-icons/react";
 import { BackHeader } from "@/components/ui/back-header";
 import { Chip, PrimaryButton } from "@/components/ui/buttons";
 import { Screen } from "@/components/ui/screen";
@@ -39,7 +39,7 @@ export function CreateScreen({ onBack, onCreate, loading = false, error }: Creat
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setGeoLabel("ตำแหน่งปัจจุบัน ✓");
+        setGeoLabel("ตำแหน่งปัจจุบัน");
         setGeoError(null);
       },
       () => {
@@ -351,18 +351,7 @@ function Check() {
         flexShrink: 0,
       }}
     >
-      <svg
-        width="13"
-        height="13"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="3.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M4 12l5 5L20 6" />
-      </svg>
+      <CheckIcon size={14} weight="bold" color="#fff" />
     </span>
   );
 }

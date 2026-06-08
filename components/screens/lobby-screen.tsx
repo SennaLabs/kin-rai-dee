@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { CheckIcon, PencilSimpleIcon } from "@phosphor-icons/react";
+import {
+  ArrowLeftIcon,
+  CheckIcon,
+  CircleIcon,
+  ExportIcon,
+  PencilSimpleIcon,
+} from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { PrimaryButton } from "@/components/ui/buttons";
 import { buzz } from "@/components/ui/motion";
@@ -90,9 +96,12 @@ export function LobbyScreen({
           borderRadius: 999,
           cursor: "pointer",
           boxShadow: "var(--sh-soft)",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 4,
         }}
       >
-        ← ออก
+        <ArrowLeftIcon size={14} weight="bold" /> ออก
       </button>
       <div
         style={{ flexShrink: 0, padding: "54px 22px 0", textAlign: "center" }}
@@ -145,19 +154,7 @@ export function LobbyScreen({
             </>
           ) : (
             <>
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v14" />
-              </svg>
-              แชร์ลิงก์เชิญ
+              <ExportIcon size={16} weight="bold" /> แชร์ลิงก์เชิญ
             </>
           )}
         </button>
@@ -247,13 +244,22 @@ export function LobbyScreen({
                           ? "var(--good)"
                           : "var(--ink-3)",
                       fontWeight: 600,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 3,
                     }}
                   >
-                    {!p.connected
-                      ? "⚪ ออฟไลน์"
-                      : isReady
-                        ? "✓ พร้อมแล้ว"
-                        : "กำลังเลือก…"}
+                    {!p.connected ? (
+                      <>
+                        <CircleIcon size={11} weight="bold" /> ออฟไลน์
+                      </>
+                    ) : isReady ? (
+                      <>
+                        <CheckIcon size={11} weight="bold" /> พร้อมแล้ว
+                      </>
+                    ) : (
+                      "กำลังเลือก…"
+                    )}
                   </div>
                 </div>
                 {p.host && (

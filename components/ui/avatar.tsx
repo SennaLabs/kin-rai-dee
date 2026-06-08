@@ -1,4 +1,5 @@
 import { createElement } from "react";
+import { CheckIcon } from "@phosphor-icons/react";
 import { avatars } from "@/assets/avatars";
 import type { Player } from "@/lib/types";
 
@@ -91,18 +92,7 @@ export function Avatar({ p, size = 40, dim, ring, check, joinPop }: AvatarProps)
             animation: "rmPop .4s ease",
           }}
         >
-          <svg
-            width="10"
-            height="10"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#fff"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M4 12l5 5L20 6" />
-          </svg>
+          <CheckIcon size={10} weight="bold" color="#fff" />
         </span>
       )}
     </div>

@@ -1,3 +1,5 @@
+import { CaretLeftIcon } from "@phosphor-icons/react";
+
 type BackHeaderProps = {
   title: string;
   onBack: () => void;
@@ -36,18 +38,7 @@ export function BackHeader({ title, onBack, light }: BackHeaderProps) {
           flexShrink: 0,
         }}
       >
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke={c}
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M15 5l-7 7 7 7" />
-        </svg>
+        <CaretLeftIcon size={20} weight="bold" color={c} />
       </button>
       <h2
         className="font-display"
