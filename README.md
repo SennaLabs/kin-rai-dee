@@ -20,6 +20,28 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Firebase setup
+
+Realtime Database security rules live in [`database.rules.json`](database.rules.json)
+(see [`database.rules.md`](database.rules.md) for the per-rule rationale). The
+CLI is pinned to the `mairuukinrai` project via `.firebaserc`; deploy rules with:
+
+```bash
+firebase deploy --only database
+```
+
+### App Check — remaining setup
+
+App Check is wired in [`lib/firebase.ts`](lib/firebase.ts) but stays a no-op
+until a reCAPTCHA key is set, so local dev works without it. To turn it on:
+
+- [ ] Create a **reCAPTCHA v3** site key and register the web app under Firebase Console → App Check.
+- [ ] Set `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` in `.env` (currently empty = App Check off).
+- [ ] Enable **Enforcement** for Realtime Database in the App Check console.
+- [ ] Add a debug token for local dev / CI — once enforced, unregistered origins are blocked.
+
+> The client uses `ReCaptchaV3Provider`, so use a classic reCAPTCHA **v3** key — not Enterprise.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
